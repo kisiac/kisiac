@@ -418,9 +418,9 @@ class Config(Singleton):
                 uuid=settings.get("uuid"),
                 fstype=settings["type"],
                 mountpoint=settings["mount"],
-                options=settings.get("options", "defaults"),
+                options=settings.get("options", ""),
                 dump=settings.get("dump", 0),
-                fsck=settings.get("pass", 0),
+                fsck=settings.get("pass", 2),
             )
 
     @property

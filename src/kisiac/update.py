@@ -1,4 +1,3 @@
-import subprocess as sp
 import sys
 from kisiac.common import (
     HostAgnosticPath,
@@ -6,6 +5,7 @@ from kisiac.common import (
     cmd_to_str,
     confirm_action,
     log_action,
+    provide_password,
     run_cmd,
 )
 from kisiac.encryption import EncryptionSetup
@@ -86,11 +86,89 @@ def update_encryptions(host: str) -> None:
     desired = Config.get_instance().encryption
     current = EncryptionSetup.from_system(host=host)
 
-    cmds = []
+    desired_by_name = desired.by_name()
+    current_by_device = current.by_device()
+    current_by_name = current.by_name()
+
+    dd_cmds = []
+    format_cmds = []
 
     # TODO remove current - desired
     # TODO add desired - current
     # TODO handle changes in mapping between name and device
+    # First handle newly added devices
+    for encryption in desired:
+        if encryption.device not in current_by_device:
+            # overwrite the header with random data
+            dd_cmds.append(
+                [
+                    "dd",
+                    "if=/dev/urandom",
+                    "bs=1M",
+                    "count=8",
+                    f"of={encryption.device!s}",
+                ]
+            )
+            format_cmds.append(
+                [
+                    "cryptsetup",
+                    "luksFormat",
+                    "--cipher",
+                    encryption.cipher,
+                    "--key-size",
+                    encryption.key_size,
+                    "--hash",
+                    encryption.hash,
+                    "--key-file",
+                    "-",
+                    encryption.device,
+                ]
+            )
+
+    cmd_msg = cmd_to_str(*(dd_cmds + format_cmds))
+
+    password = None
+
+    def get_password() -> str:
+        return provide_password("Provide encryption password.")
+
+    if format_cmds and confirm_action(
+        f"The following cryptsetup commands will be executed:\n{cmd_msg}\n"
+        "\nProceed? If answering no, consider making the changes manually or "
+        "adjust the kisiac encryption configuration."
+    ):
+        error_msg = "Incomplete encryption update due to error (make sure to manually fix this!)"
+        password = get_password()
+        for cmd in dd_cmds:
+            run_cmd(cmd, host=host, sudo=True, user_error_msg=error_msg)
+        for cmd in format_cmds:
+            run_cmd(cmd, host=host, sudo=True, user_error_msg=error_msg, input=password)
+
+    encryptions_to_open = [
+        encryption for encryption in desired if encryption.name not in current_by_name
+    ]
+    encryptions_to_reopen = [
+        encryption
+        for encryption in desired
+        if encryption.name in current_by_name
+        and current_by_name[encryption.name].device != encryption.device
+    ]
+    encryptions_to_close = [
+        encryption for encryption in current if encryption.name not in desired_by_name
+    ]
+
+    if (
+        encryptions_to_open or encryptions_to_reopen or encryptions_to_close
+    ) and password is None:
+        password = get_password()
+
+        for encryption in encryptions_to_open:
+            encryption.open(host, password)
+        for encryption in encryptions_to_reopen:
+            encryption.close(host)
+            encryption.open(host, password)
+        for encryption in encryptions_to_close:
+            encryption.close(host)
 
 
 def update_lvm(host: str) -> None:
@@ -201,9 +279,9 @@ def update_lvm(host: str) -> None:
         "adjust the kisiac LVM configuration."
     ):
         for cmd in cmds:
-            try:
-                run_cmd(cmd, host=host, sudo=True, user_error=False)
-            except sp.CalledProcessError as e:
-                raise UserError(
-                    f"Incomplete LVM update due to error (make sure to manually fix this!): {e.stderr}"
-                )
+            run_cmd(
+                cmd,
+                host=host,
+                sudo=True,
+                user_error_msg="Incomplete LVM update due to error (make sure to manually fix this!)",
+            )

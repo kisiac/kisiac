@@ -401,6 +401,7 @@ class Config(Singleton):
         check_type("infrastructure_name key", infrastructure_name, str)
         return infrastructure_name
 
+    @property
     def encryption(self) -> EncryptionSetup:
         encryption = self.get("encryption", default={})
         return EncryptionSetup.from_config(encryption)
@@ -432,11 +433,11 @@ class Config(Singleton):
                 )
             )
         if any(filesystem.fstype == "swap" for filesystem in filesystems) and any(
-            pv.encrypt for pv in self.lvm.pvs.values()
+            self.encryption
         ):
             raise UserError(
                 "Swap partition set up, but physicial volume with encryption specified. "
-                "This is a not allowed risk since encrypted data can end up in the swap. "
+                "This is a risk since encrypted data can end up in the swap. "
                 "It is possible to encrypt swap as well, but this is currently not supported "
                 "by kisiac. Remove the swap partition or disable encryption."
             )

@@ -65,9 +65,11 @@ class LVMSetup:
             check_type("lvm pv entry", settings, dict)
             check_type("lvm pv encrypt", settings.get("encrypt", False), bool)
             check_type("lvm pv device", settings.get("device", None), str)
-            entities.pvs.add(PV(
-                device=settings["device"],
-            ))
+            entities.pvs.add(
+                PV(
+                    device=settings["device"],
+                )
+            )
         for name, settings in config.get("vgs", {}).items():
             check_type(f"lvm vg {name} entry", settings, dict)
 

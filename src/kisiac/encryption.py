@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Self
 
 from kisiac.common import UserError, check_type, run_cmd
-from kisiac.filesystems import DeviceInfos
 
 
 @dataclass(frozen=True)
@@ -41,6 +40,7 @@ class EncryptionSetup:
 
     @classmethod
     def from_system(cls, host: str) -> Self:
+        from kisiac.filesystems import DeviceInfos
         encryptions = set()
         luks_devices = [device for device in DeviceInfos(host) if device.fstype == "crypto_LUKS"]
         for luks_device in luks_devices:

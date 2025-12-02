@@ -8,6 +8,9 @@ from humanfriendly import parse_size
 from kisiac.common import check_type, exists_cmd, run_cmd
 
 
+CRYPT_PREFIX = "crypt_"
+
+
 @dataclass(frozen=True)
 class PV:
     device: str
@@ -17,14 +20,23 @@ class PV:
 class LV:
     name: str
     layout: str
-    size: int
+    size: int | None
 
     def is_same_size(self, other: Self) -> bool:
+        if self.fills_vg() or other.fills_vg():
+            # if both just fill the VG, their sizes are considered unchanged
+            return other.fills_vg()
+
+        assert self.size is not None and other.size is not None
+
         def simplify(size: int) -> int:
             # tens of MB should be precise enough
             return size // 10**7
 
         return simplify(self.size) == simplify(other.size)
+
+    def fills_vg(self) -> bool:
+        return self.size is not None
 
 
 @dataclass(frozen=True)
@@ -49,9 +61,13 @@ class LVMSetup:
     def from_config(cls, config: dict[str, Any]) -> Self:
         check_type("lvm key", config, dict)
         entities = cls()
-        for pv in config.get("pvs", []):
-            check_type("lvm pv entry", pv, str)
-            entities.pvs.add(PV(device=pv))
+        for name, settings in config.get("pvs", []):
+            check_type("lvm pv entry", settings, dict)
+            check_type("lvm pv encrypt", settings.get("encrypt", False), bool)
+            check_type("lvm pv device", settings.get("device", None), str)
+            entities.pvs.add(PV(
+                device=settings["device"],
+            ))
         for name, settings in config.get("vgs", {}).items():
             check_type(f"lvm vg {name} entry", settings, dict)
 
@@ -117,7 +133,9 @@ class LVMSetup:
         for entry in vg_data:
             entities.vgs[entry["vg_name"]] = VG(name=entry["vg_name"])
         for entry in pv_data:
-            pv_obj = PV(device=entry["pv_name"])
+            pv_device = entry["pv_name"]
+
+            pv_obj = PV(device=pv_device)
             entities.pvs.add(pv_obj)
             entities.vgs[entry["vg_name"]].pvs.add(pv_obj)
 

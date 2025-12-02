@@ -57,23 +57,37 @@ messages:
     Do NOT use conda to manage software (it is available, but just for snakemake
     internal use).
 
+encryption:
+  crypt_loop0:
+    device: /dev/loop0
+    hash: sha512
+    cipher: aes-xts-plain64
+    key_size: 256
+
 lvm:
   pvs:
-    - /dev/loop0
+    - /dev/mapper/crypt_loop0
   vgs:
-    test-vg:
+    test_vg:
       pvs:
-        - /dev/loop0
+        - /dev/mapper/crypt_loop0
       lvs:
-        test-lv:
-          size: 50M
+        test_lv:
+          size: 20M
+          layout: linear
+        test-lv2:  # intentionally use hyphen here for testing
+          size: rest
           layout: linear
 
 filesystems:
-  - device: /dev/test-vg/test-lv
+  - device: /dev/test_vg/test_lv
     type: ext4
-    mount: /mnt/test-lv
-    options: defaults
+    mount: /mnt/test_lv
+    options: noauto
+  - device: /dev/test_vg/test-lv2
+    type: ext4
+    mount: /mnt/test_lv2
+    options: noauto
 
 permissions:
   /tmp/test:

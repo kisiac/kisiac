@@ -8,6 +8,7 @@ from kisiac.common import (
     log_action,
     run_cmd,
 )
+from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems
 from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac import users
@@ -52,6 +53,8 @@ def update_host(host: str) -> None:
 
     update_system_packages(host)
 
+    update_encryptions(host)
+
     update_lvm(host)
 
     update_filesystems(host)
@@ -77,6 +80,17 @@ def update_system_packages(host: str) -> None:
         sudo=True,
         host=host,
     )
+
+
+def update_encryptions(host: str) -> None:
+    desired = Config.get_instance().encryption
+    current = EncryptionSetup.from_system(host=host)
+
+    cmds = []
+
+    # TODO remove current - desired
+    # TODO add desired - current
+    # TODO handle changes in mapping between name and device
 
 
 def update_lvm(host: str) -> None:

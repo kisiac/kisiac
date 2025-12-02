@@ -7,6 +7,7 @@ from typing import Any, Iterable, Self, Sequence
 import base64
 
 import jinja2
+from kisiac.encryption import EncryptionSetup
 import yaml
 import git
 from pyfstab.entry import Entry as FstabEntry
@@ -400,28 +401,46 @@ class Config(Singleton):
         check_type("infrastructure_name key", infrastructure_name, str)
         return infrastructure_name
 
+    def encryption(self) -> EncryptionSetup:
+        encryption = self.get("encryption", default={})
+        return EncryptionSetup.from_config(encryption)
+
     @property
     def lvm(self) -> LVMSetup:
         lvm = self.get("lvm", default={})
         return LVMSetup.from_config(lvm)
 
     @property
-    def filesystems(self) -> Iterable[Filesystem]:
+    def filesystems(self) -> list[Filesystem]:
         filesystems = self.get("filesystems", default={})
         check_type("filesystems key", filesystems, list)
+
+        entries = []
         for settings in filesystems:
             check_type("filesystem item", settings, dict)
             device = settings.get("device")
-            yield Filesystem(
-                device=Path(device) if device is not None else None,
-                label=settings.get("label"),
-                uuid=settings.get("uuid"),
-                fstype=settings["type"],
-                mountpoint=settings["mount"],
-                options=settings.get("options", ""),
-                dump=settings.get("dump", 0),
-                fsck=settings.get("pass", 2),
+            entries.append(
+                Filesystem(
+                    device=Path(device) if device is not None else None,
+                    label=settings.get("label"),
+                    uuid=settings.get("uuid"),
+                    fstype=settings["type"],
+                    mountpoint=settings["mount"],
+                    options=settings.get("options", ""),
+                    dump=settings.get("dump", 0),
+                    fsck=settings.get("pass", 2),
+                )
             )
+        if any(filesystem.fstype == "swap" for filesystem in filesystems) and any(
+            pv.encrypt for pv in self.lvm.pvs.values()
+        ):
+            raise UserError(
+                "Swap partition set up, but physicial volume with encryption specified. "
+                "This is a not allowed risk since encrypted data can end up in the swap. "
+                "It is possible to encrypt swap as well, but this is currently not supported "
+                "by kisiac. Remove the swap partition or disable encryption."
+            )
+        return entries
 
     @property
     def permissions(self) -> dict[Path, Permissions]:

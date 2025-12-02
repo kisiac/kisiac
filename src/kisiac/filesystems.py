@@ -1,9 +1,9 @@
 from copy import copy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import re
-from typing import Any, Self
+from typing import Any, Iterator, Self
 from kisiac.common import HostAgnosticPath, UserError, confirm_action, run_cmd
 from kisiac.config import Config, Filesystem, UserSet
 
@@ -97,6 +97,7 @@ class DeviceInfo:
     fstype: str | None
     label: str | None
     uuid: str | None
+    children: list[Self] = field(default_factory=list)
 
     def is_targeted_by_filesystem(self, filesystem: Filesystem) -> bool:
         if filesystem.device is not None:
@@ -125,7 +126,7 @@ class DeviceInfos:
         )
         self.infos: list[DeviceInfo] = []
 
-        def parse_entry(entry: dict[str, Any]) -> None:
+        def parse_entry(entry: dict[str, Any]) -> DeviceInfo:
             device = Path(entry["name"])
             device_info = DeviceInfo(
                 device=device,
@@ -145,7 +146,8 @@ class DeviceInfos:
                 self.infos.append(device_info.with_device(Path(device)))
 
             for child in entry.get("children", []):
-                parse_entry(child)
+                device_info.children.append(parse_entry(child))
+            return device_info
 
         for entry in lsblk_output["blockdevices"]:
             parse_entry(entry)
@@ -164,3 +166,6 @@ class DeviceInfos:
             if info.device == device:
                 return info
         raise UserError(f"No device info found for device {device}")
+
+    def __iter__(self) -> Iterator[DeviceInfo]:
+        return iter(self.infos)

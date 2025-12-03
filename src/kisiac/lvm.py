@@ -61,13 +61,11 @@ class LVMSetup:
     def from_config(cls, config: dict[str, Any]) -> Self:
         check_type("lvm key", config, dict)
         entities = cls()
-        for name, settings in config.get("pvs", []):
-            check_type("lvm pv entry", settings, dict)
-            check_type("lvm pv encrypt", settings.get("encrypt", False), bool)
-            check_type("lvm pv device", settings.get("device", None), str)
+        for pv in config.get("pvs", []):
+            check_type("lvm pv entry", pv, str)
             entities.pvs.add(
                 PV(
-                    device=settings["device"],
+                    device=pv,
                 )
             )
         for name, settings in config.get("vgs", {}).items():

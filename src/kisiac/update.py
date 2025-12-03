@@ -1,3 +1,4 @@
+from enum import EnumDict
 import sys
 from kisiac.common import (
     HostAgnosticPath,
@@ -90,13 +91,21 @@ def update_encryptions(host: str) -> None:
     current_by_device = current.by_device()
     current_by_name = current.by_name()
 
+    for encryption in desired:
+        if encryption.name is not None:
+            curr_encryption = current_by_name.get(encryption.name)
+            if curr_encryption is not None:
+                if curr_encryption != encryption:
+                    # TODO support such changes
+                    raise UserError(
+                        f"Encryption {encryption.name} has changed. "
+                        "Modifying it via kisiac is not yet supported. "
+                        f"Current: {curr_encryption}, Desired: {encryption}"
+                    )
+
     dd_cmds = []
     format_cmds = []
 
-    # TODO remove current - desired
-    # TODO add desired - current
-    # TODO handle changes in mapping between name and device
-    # First handle newly added devices
     for encryption in desired:
         if encryption.device not in current_by_device:
             # overwrite the header with random data

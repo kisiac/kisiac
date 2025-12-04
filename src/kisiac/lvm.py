@@ -8,6 +8,9 @@ from humanfriendly import parse_size
 from kisiac.common import check_type, exists_cmd, run_cmd
 
 
+CRYPT_PREFIX = "crypt_"
+
+
 @dataclass(frozen=True)
 class PV:
     device: str
@@ -17,14 +20,29 @@ class PV:
 class LV:
     name: str
     layout: str
-    size: int
+    size: int | None
 
     def is_same_size(self, other: Self) -> bool:
+        if self.fills_vg() or other.fills_vg():
+            # if both just fill the VG, their sizes are considered unchanged
+            return self.fills_vg() and other.fills_vg()
+
+        assert self.size is not None and other.size is not None
+
         def simplify(size: int) -> int:
             # tens of MB should be precise enough
             return size // 10**7
 
         return simplify(self.size) == simplify(other.size)
+
+    def fills_vg(self) -> bool:
+        return self.size is not None
+
+    def size_arg(self) -> list[str]:
+        if self.size is None:
+            return ["--extents", "+100%FREE"]
+        else:
+            return ["--size", f"{self.size}B"]
 
 
 @dataclass(frozen=True)
@@ -51,7 +69,11 @@ class LVMSetup:
         entities = cls()
         for pv in config.get("pvs", []):
             check_type("lvm pv entry", pv, str)
-            entities.pvs.add(PV(device=pv))
+            entities.pvs.add(
+                PV(
+                    device=pv,
+                )
+            )
         for name, settings in config.get("vgs", {}).items():
             check_type(f"lvm vg {name} entry", settings, dict)
 
@@ -61,10 +83,17 @@ class LVMSetup:
             lvs_entities = {}
             for lv_name, lv_settings in lvs.items():
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
+
+                size = lv_settings["size"]
+                if size == "rest":
+                    size = None
+                else:
+                    size = parse_size(size, binary=True)
+
                 lvs_entities[lv_name] = LV(
                     name=lv_name,
                     layout=lv_settings["layout"],
-                    size=parse_size(lv_settings["size"], binary=True),
+                    size=size,
                 )
 
             entities.vgs[name] = VG(
@@ -117,7 +146,9 @@ class LVMSetup:
         for entry in vg_data:
             entities.vgs[entry["vg_name"]] = VG(name=entry["vg_name"])
         for entry in pv_data:
-            pv_obj = PV(device=entry["pv_name"])
+            pv_device = entry["pv_name"]
+
+            pv_obj = PV(device=pv_device)
             entities.pvs.add(pv_obj)
             entities.vgs[entry["vg_name"]].pvs.add(pv_obj)
 

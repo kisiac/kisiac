@@ -5,6 +5,7 @@ from typing import Any, Callable, Self, Sequence
 import importlib
 import re
 import textwrap
+import os
 
 import inquirer
 
@@ -46,6 +47,33 @@ def confirm_action(desc: str) -> bool:
     return response["action"] == "yes"
 
 
+def provide_password(msg: str) -> str:
+    from kisiac.runtime_settings import GlobalSettings
+
+    password = os.environ.get("KISIAC_ENCRYPTION_PASSWORD")
+
+    if GlobalSettings.get_instance().non_interactive and password is None:
+        raise UserError(
+            "No password provided via KISIAC_ENCRYPTION_PASSWORD but non-interactive mode activated."
+        )
+
+    if password is not None:
+        return password
+
+    while True:
+        response = inquirer.prompt(
+            [
+                inquirer.Password("password", message=msg),
+                inquirer.Password("confirm_password", message="Confirm password"),
+            ]
+        )
+        assert response is not None
+        if response["password"] != response["confirm_password"]:
+            log_msg("Passwords do not match, try again.")
+        else:
+            return response["password"]
+
+
 def exists_cmd(cmd: str, host: str, sudo: bool) -> bool:
     try:
         run_cmd(["which", cmd], host=host, sudo=sudo, user_error=False)
@@ -73,6 +101,7 @@ def run_cmd(
     env: dict[str, Any] | None = None,
     sudo: bool = False,
     user_error: bool = True,
+    user_error_msg: str = "",
     check: bool = True,
 ) -> sp.CompletedProcess[str]:
     """Run a system command using subprocess.run and check for errors."""
@@ -98,8 +127,10 @@ def run_cmd(
         )
     except sp.CalledProcessError as e:
         if user_error:
+            if user_error_msg:
+                user_error_msg += ": "
             raise UserError(
-                f"Error occurred while running command '{' '.join(cmd)}': {e.stderr}"
+                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {e.stderr}"
             ) from e
         else:
             raise

@@ -18,6 +18,8 @@ jobs:
       - run: pixi run check
   test:
     runs-on: ubuntu-latest
+    env:
+      KISIAC_ENCRYPTION_PASSWORD: "dummy"
     steps:
       - uses: actions/checkout@v4
       - name: setup test data

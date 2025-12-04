@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/kisiac/kisiac/compare/v1.1.0...v1.2.0) (2025-12-04)
+
+
+### Features
+
+* allow yte config ([#8](https://github.com/kisiac/kisiac/issues/8)) ([4dda2b4](https://github.com/kisiac/kisiac/commit/4dda2b4160fbbe107d0b4b3a9d185a9c85716d66))
+
 ## [1.1.0](https://github.com/kisiac/kisiac/compare/v1.0.4...v1.1.0) (2025-12-04)
 
 

@@ -12,7 +12,7 @@ class Encryption:
     device: Path
     hash: str
     cipher: str
-    key_size: int
+    key_size: int | None
 
     def open(self, host: str, password: str) -> None:
         assert self.name is not None
@@ -25,6 +25,18 @@ class Encryption:
     def close(self, host: str) -> None:
         assert self.name is not None
         run_cmd(["cryptsetup", "close", self.name], sudo=True)
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Encryption):
+            return False
+        # TODO remove this method once we know how to obtain
+        # key_size from the system
+        return (
+            self.name == other.name
+            and self.device == other.device
+            and self.hash == other.hash
+            and self.cipher == other.cipher
+        )
 
 
 @dataclass
@@ -84,14 +96,14 @@ class EncryptionSetup:
                 if len(luks_device.children) == 1
                 else None
             )
-            print(json.dumps(output, indent=2))
+            # TODO find a way to retrieve the key_size from the system
             encryptions.add(
                 Encryption(
                     name=name,
                     device=luks_device.device,
                     hash=output["keyslots"]["0"]["af"]["hash"],
                     cipher=output["keyslots"]["0"]["area"]["encryption"],
-                    key_size=output["keyslots"]["0"]["area"]["key_size"],
+                    key_size=None,
                 )
             )
         return cls(encryptions=encryptions)

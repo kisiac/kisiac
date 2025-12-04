@@ -1,4 +1,3 @@
-from enum import EnumDict
 import sys
 from kisiac.common import (
     HostAgnosticPath,
@@ -166,9 +165,7 @@ def update_encryptions(host: str) -> None:
         encryption for encryption in current if encryption.name not in desired_by_name
     ]
 
-    if (
-        encryptions_to_open or encryptions_to_reopen or encryptions_to_close
-    ):
+    if encryptions_to_open or encryptions_to_reopen or encryptions_to_close:
         if password is None:
             password = get_password()
 

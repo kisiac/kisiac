@@ -197,7 +197,7 @@ class Files:
 
     def get_config(self) -> dict[str, Any]:
         config = {}
-        for base in self.host_stack(include_infrastructure_root=True):
+        for base in self.host_stack():
             config_path = base / "kisiac.yaml"
             if config_path.exists():
                 with open(config_path, "r") as f:

@@ -25,7 +25,7 @@ class LV:
     def is_same_size(self, other: Self) -> bool:
         if self.fills_vg() or other.fills_vg():
             # if both just fill the VG, their sizes are considered unchanged
-            return other.fills_vg()
+            return self.fills_vg() and other.fills_vg()
 
         assert self.size is not None and other.size is not None
 
@@ -77,10 +77,17 @@ class LVMSetup:
             lvs_entities = {}
             for lv_name, lv_settings in lvs.items():
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
+
+                size = lv_settings["size"]
+                if size == "rest":
+                    size = None
+                else:
+                    size = parse_size(size, binary=True)
+
                 lvs_entities[lv_name] = LV(
                     name=lv_name,
                     layout=lv_settings["layout"],
-                    size=parse_size(lv_settings["size"], binary=True),
+                    size=size,
                 )
 
             entities.vgs[name] = VG(

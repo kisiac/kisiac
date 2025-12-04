@@ -38,11 +38,11 @@ class LV:
     def fills_vg(self) -> bool:
         return self.size is not None
 
-    def size_arg(self) -> str:
+    def size_arg(self) -> list[str]:
         if self.size is None:
-            return "+100%FREE"
+            return ["--extents", "+100%FREE"]
         else:
-            return f"{self.size}B"
+            return ["--size", f"{self.size}B"]
 
 
 @dataclass(frozen=True)

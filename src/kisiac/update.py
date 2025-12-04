@@ -218,8 +218,7 @@ def update_lvm(host: str) -> None:
             "lvcreate",
             "-n",
             lv.name,
-            "-L",
-            lv.size_arg(),
+            *lv.size_arg(),
             vg.name,
             "--type",
             lv.layout,
@@ -276,8 +275,7 @@ def update_lvm(host: str) -> None:
                     [
                         "lvresize",
                         *resize_fs,
-                        "-L",
-                        lv_desired.size_arg(),
+                        *lv_desired.size_arg(),
                         f"{vg_desired.name}/{lv_desired.name}",
                     ]
                 )

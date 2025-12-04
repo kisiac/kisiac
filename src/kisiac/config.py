@@ -180,12 +180,10 @@ class Files:
             if infra_path.exists():
                 yield infra_path
 
-    def host_stack(self, include_infrastructure_root: bool = False) -> Iterable[Path]:
+    def host_stack(self) -> Iterable[Path]:
         hostname = platform.node()
         for infra in self.infrastructure_stack():
             base = infra / "hosts"
-            if include_infrastructure_root and infra.exists():
-                yield infra
             if base.exists():
                 for entry in base.iterdir():
                     if not entry.is_dir():

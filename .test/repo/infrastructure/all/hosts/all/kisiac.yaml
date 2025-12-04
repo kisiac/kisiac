@@ -1,0 +1,106 @@
+users:
+  jkoester:
+    ssh_pub_key: ssh-rsa AAAdummy
+    primary_group: koesterlab
+    groups:
+      primary: koesterlab
+      secondary:
+        - researchers
+    vars:
+      something: foo
+
+user_software:
+  - pkg: snakemake
+    with: snakemake-storage-plugin-s3
+    desc: for running workflows
+  - pkg: conda
+    desc: only for snakemake internal use, use pixi instead
+    post_install: |
+      conda init
+      conda config --set auto_activate_base false
+  - pkg: exa
+    desc: for listing files (ls replacement)
+  - pkg: s5cmd
+    desc: for accessing s3
+  - pkg: starship
+    desc: for a fancy shell prompt
+    post_install: |
+      echo 'eval "\$(starship init bash)"' >> ~/.bashrc
+  - pkg: ripgrep
+    cmd: rg
+    desc: for searching text (grep replacement)
+  - pkg: bat
+    desc: for viewing text files (cat replacement)
+  - pkg: sad
+    desc: for text replacing in files (sed replacement)
+  - pkg: fzf
+    desc: for fuzzy finding files
+    post_install: |
+      echo 'eval "\$(fzf --bash)"' >> ~/.bashrc
+  - pkg: zoxide
+    desc: for quickly navigating the filesystem (cd replacement)
+    post_install: |
+      echo 'eval "\$(zoxide init bash)"' >> ~/.bashrc
+  - pkg: nbterm
+    with:
+      - ipykernel
+      - polars
+      - pandas
+      - altair
+    desc: for running jupyter notebooks in the terminal (includes polars, pandas, altair)
+
+system_software:
+  - stress-ng
+
+messages:
+  - >
+    Do NOT use conda to manage software (it is available, but just for snakemake
+    internal use).
+
+encryption:
+  - device: /dev/loop0
+    name: crypt_loop0
+    hash: sha512
+    cipher: aes-xts-plain64
+    key_size: 256
+
+lvm:
+  pvs:
+    - /dev/mapper/crypt_loop0
+  vgs:
+    test_vg:
+      pvs:
+        - /dev/mapper/crypt_loop0
+      lvs:
+        test_lv:
+          size: 20M
+          layout: linear
+        test-lv2:  # intentionally use hyphen here for testing
+          size: rest
+          layout: linear
+
+filesystems:
+  - device: /dev/test_vg/test_lv
+    type: ext4
+    mount: /mnt/test_lv
+    options: noauto
+  - device: /dev/test_vg/test-lv2
+    type: ext4
+    mount: /mnt/test_lv2
+    options: noauto
+
+permissions:
+  /tmp/test:
+    user: jkoester
+    group: koesterlab
+    setgid: true
+    sticky: true
+    setuid: true
+    read: user
+    write: user
+  /tmp/test/exec:
+    user: jkoester
+    group: koesterlab
+    execute: user
+    read: user
+    write: user

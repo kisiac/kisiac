@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/kisiac/kisiac/compare/v1.0.4...v1.1.0) (2025-12-04)
+
+
+### Features
+
+* encryption support ([#7](https://github.com/kisiac/kisiac/issues/7)) ([8340ed6](https://github.com/kisiac/kisiac/commit/8340ed68633597b3658731d700c7ba54d5548c25))
+
+
+### Bug Fixes
+
+* proper defaults for filesystem spec ([c775169](https://github.com/kisiac/kisiac/commit/c7751696c2c9f1c830ec1677c753db49a9ac93c4))
+
 ## [1.0.4](https://github.com/kisiac/kisiac/compare/v1.0.3...v1.0.4) (2025-11-24)
 
 

@@ -38,6 +38,12 @@ class LV:
     def fills_vg(self) -> bool:
         return self.size is not None
 
+    def size_arg(self) -> str:
+        if self.size is None:
+            return "+100%FREE"
+        else:
+            return f"{self.size}B"
+
 
 @dataclass(frozen=True)
 class VG:

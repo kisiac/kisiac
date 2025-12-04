@@ -257,11 +257,14 @@ def update_lvm(host: str) -> None:
                 )
 
             if not lv_current.is_same_size(lv_desired):
-                log_action(
-                    host,
-                    f"Resizing LV {lv_desired.name} from {lv_current.size} to "
-                    f"{lv_desired.size}",
-                )
+                if lv_desired.fills_vg():
+                    log_action(host, f"Ensuring that LV {lv_desired.name} fills VG.")
+                else:
+                    log_action(
+                        host,
+                        f"Resizing LV {lv_desired.name} from {lv_current.size} to "
+                        f"{lv_desired.size}",
+                    )
 
                 device_info = device_infos.get_info_for_device(
                     vg_desired.get_lv_device(lv_desired.name)

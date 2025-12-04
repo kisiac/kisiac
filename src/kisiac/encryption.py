@@ -84,6 +84,7 @@ class EncryptionSetup:
                 if len(luks_device.children) == 1
                 else None
             )
+            print(json.dumps(output, indent=2))
             encryptions.add(
                 Encryption(
                     name=name,

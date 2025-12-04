@@ -165,12 +165,12 @@ def update_encryptions(host: str) -> None:
     encryptions_to_close = [
         encryption for encryption in current if encryption.name not in desired_by_name
     ]
-    print(encryptions_to_open, encryptions_to_reopen, encryptions_to_close)
 
     if (
         encryptions_to_open or encryptions_to_reopen or encryptions_to_close
-    ) and password is None:
-        password = get_password()
+    ):
+        if password is None:
+            password = get_password()
 
         for encryption in encryptions_to_open:
             encryption.open(host, password)

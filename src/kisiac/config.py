@@ -199,7 +199,7 @@ class Files:
             config_path = base / "kisiac.yaml"
             if config_path.exists():
                 with open(config_path, "r") as f:
-                    config.update(yaml.safe_load(f))
+                    config.update(load_config(f))
         return config
 
     def get_files(self, user: str | None) -> Iterable[File]:
@@ -275,18 +275,11 @@ class Config(Singleton):
 
         self._config: dict[str, Any] = {}
 
-        def update_config(config) -> None:
-            config = yaml.safe_load(config)
-
-            if not isinstance(config, dict):
-                raise ValueError("Config has to be a mapping")
-            self._config.update(config)
-
         config_set = False
 
         try:
             with open(config_file_path, "r") as f:
-                update_config(f)
+                self._config.update(load_config(f))
             config_set = True
         except (FileNotFoundError, IOError):
             # ignore missing file or read errors, we fall back to env var
@@ -459,3 +452,11 @@ class Config(Singleton):
                 sticky=settings.get("sticky", False),
             )
         return permissions
+
+
+def load_config(config) -> dict[Any, Any]:
+    config = yte.process_yaml(config, require_use_yte=True)
+
+    if not isinstance(config, dict):
+        raise ValueError("Config has to be a mapping")
+    return config

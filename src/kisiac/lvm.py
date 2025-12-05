@@ -134,7 +134,13 @@ class LVMSetup:
                 sudo=True,
             ).stdout
         )["report"][0]["vg"]
-        print(vg_data)
+        print(
+            run_cmd(
+                ["vgs", "--options", "vg_name,devices", "--reportformat", "json"],
+                host=host,
+                sudo=True,
+            ).stdout
+        )
 
         pv_data = json.loads(
             run_cmd(

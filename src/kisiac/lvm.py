@@ -1,7 +1,9 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
-from typing import Any, Self
+import re
+from typing import Any, Iterable, Self
 
 from humanfriendly import parse_size
 
@@ -9,6 +11,7 @@ from kisiac.common import check_type, exists_cmd, run_cmd
 
 
 CRYPT_PREFIX = "crypt_"
+VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\(?P<info>.+\)$")
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,7 @@ class VG:
 class LVMSetup:
     pvs: set[PV] = field(default_factory=set)
     vgs: dict[str, VG] = field(default_factory=dict)
+    missing_pvs: set[PV] = field(default_factory=set)
 
     def is_empty(self) -> bool:
         return not self.pvs and not self.vgs
@@ -127,20 +131,16 @@ class LVMSetup:
             ).stdout
         )["report"][0]["lv"]
 
-        vg_data = json.loads(
+        vg_data_raw = json.loads(
             run_cmd(
                 ["vgs", "--options", "vg_name,devices", "--reportformat", "json"],
                 host=host,
                 sudo=True,
             ).stdout
         )["report"][0]["vg"]
-        print(
-            run_cmd(
-                ["vgs", "--options", "vg_name,devices", "--reportformat", "json"],
-                host=host,
-                sudo=True,
-            ).stdout
-        )
+        vg_data = defaultdict(list)
+        for entry in vg_data_raw:
+            vg_data[entry["vg_name"]].append(entry["devices"])
 
         pv_data = json.loads(
             run_cmd(
@@ -150,8 +150,10 @@ class LVMSetup:
             ).stdout
         )["report"][0]["pv"]
 
-        for entry in vg_data:
-            entities.vgs[entry["vg_name"]] = VG(name=entry["vg_name"])
+        for vg_name, device_reports in vg_data:
+            entities.vgs[vg_name] = VG(name=vg_name)
+            entities.missing_pvs.update(get_missing_pvs(device_reports))
+
         for entry in pv_data:
             pv_device = entry["pv_name"]
 
@@ -167,3 +169,16 @@ class LVMSetup:
                 size=parse_size(entry["lv_size"], binary=True),
             )
         return entities
+
+def get_missing_pvs(device_reports: Iterable[str]) -> Iterable[PV]:
+    for device_report in device_reports:
+        m = VGS_DEVICE_REPORT_RE.match(device_report)
+        assert m is not None, f"Invalid device report: {device_report}"
+        info = m.group("info")
+        if info == "missing":
+            yield PV(device=m.group("device"))
+        else:
+            try:
+                int(info)
+            except ValueError:
+                raise ValueError(f"Unexpected vgs device info: {info}")

@@ -61,4 +61,4 @@ jobs:
       - name: check-hosts
         shell: pixi run bash -e {0}
         run: |
-          kisiac --non-interactive check-hosts
+          kisiac --non-interactive check-hosts localhost

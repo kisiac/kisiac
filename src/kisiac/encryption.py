@@ -48,21 +48,26 @@ class EncryptionSetup:
         check_type("encryption key", config, list)
         encryptions = set()
         for i, settings in enumerate(config):
-            check_type(f"encryption item '{i}'", settings, dict)
-            try:
-                encryptions.add(
-                    Encryption(
-                        name=settings.get("name"),
-                        device=Path(settings["device"]),
-                        hash=settings["hash"],
-                        cipher=settings["cipher"],
-                        key_size=settings["key_size"],
+            check_type(f"encryption item {i}", settings, dict)
+            mapping = settings.get("mapping", {})
+            check_type(f"mapping of encryption item {i}", mapping, dict)
+            for name, device in mapping.items():
+                check_type(f"device of encryption item {i}", device, str)
+                check_type(f"name of encryption item {i}", name, str)
+                try:
+                    encryptions.add(
+                        Encryption(
+                            name=name,
+                            device=Path(device),
+                            hash=settings["hash"],
+                            cipher=settings["cipher"],
+                            key_size=settings["key_size"],
+                        )
                     )
-                )
-            except KeyError as e:
-                raise UserError(
-                    f"Missing required key '{e.args[0]}' in encryption item '{i}'"
-                )
+                except KeyError as e:
+                    raise UserError(
+                        f"Missing required key '{e.args[0]}' in encryption item '{i}'"
+                    )
         return cls(encryptions=encryptions)
 
     @classmethod

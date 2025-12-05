@@ -423,7 +423,7 @@ class Config(Singleton):
                     fsck=settings.get("pass", 2),
                 )
             )
-        if any(filesystem.fstype == "swap" for filesystem in entries) and any(
+        if any(filesystem.fs_type == "swap" for filesystem in entries) and any(
             self.encryption
         ):
             raise UserError(

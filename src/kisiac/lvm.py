@@ -170,6 +170,7 @@ class LVMSetup:
             )
         return entities
 
+
 def get_missing_pvs(device_reports: Iterable[str]) -> Iterable[PV]:
     for device_report in device_reports:
         m = VGS_DEVICE_REPORT_RE.match(device_report)

@@ -13,7 +13,7 @@ CRYPT_PREFIX = "crypt_"
 
 @dataclass(frozen=True)
 class PV:
-    device: str
+    device: Path
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,7 @@ class LVMSetup:
             check_type("lvm pv entry", pv, str)
             entities.pvs.add(
                 PV(
-                    device=pv,
+                    device=Path(pv),
                 )
             )
         for name, settings in config.get("vgs", {}).items():
@@ -98,7 +98,7 @@ class LVMSetup:
 
             entities.vgs[name] = VG(
                 name=name,
-                pvs={PV(device=pv) for pv in settings.get("pvs", [])},
+                pvs={PV(device=Path(pv)) for pv in settings.get("pvs", [])},
                 lvs=lvs_entities,
             )
         return entities
@@ -148,7 +148,7 @@ class LVMSetup:
         for entry in pv_data:
             pv_device = entry["pv_name"]
 
-            pv_obj = PV(device=pv_device)
+            pv_obj = PV(device=Path(pv_device))
             entities.pvs.add(pv_obj)
             entities.vgs[entry["vg_name"]].pvs.add(pv_obj)
 

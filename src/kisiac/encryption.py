@@ -76,7 +76,7 @@ class EncryptionSetup:
 
         encryptions = set()
         luks_devices = [
-            device for device in DeviceInfos(host) if device.fstype == "crypto_LUKS"
+            device for device in DeviceInfos(host) if device.fs_type == "crypto_LUKS"
         ]
         for luks_device in luks_devices:
             output = json.loads(

@@ -1,10 +1,12 @@
 import json
 
-from kisiac.common import log_msg, run_cmd
+from kisiac.common import UserError, exists_cmd, log_msg, run_cmd
 from kisiac.filesystems import DeviceInfos
 
 
 def check_host(host: str) -> None:
+    if not exists_cmd("smartctl", host, sudo=True):
+        raise UserError("smartctl not found, install smartmontools")
     device_infos = DeviceInfos(host)
 
     healthy_devices = []

@@ -150,7 +150,7 @@ class LVMSetup:
             ).stdout
         )["report"][0]["pv"]
 
-        for vg_name, device_reports in vg_data:
+        for vg_name, device_reports in vg_data.items():
             entities.vgs[vg_name] = VG(name=vg_name)
             entities.missing_pvs.update(get_missing_pvs(device_reports))
 

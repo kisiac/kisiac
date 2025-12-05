@@ -9,25 +9,34 @@ def check_host(host: str) -> None:
 
     healthy_devices = []
     unhealthy_devices = []
+    error_msgs = []
 
     for device_info in device_infos:
         if device_info.device_type == "disk":
-            output = json.loads(
-                run_cmd(
-                    [
-                        "smartctl",
-                        "-H",
-                        "--json",
-                    ],
-                    sudo=True,
-                ).stdout
+            res = run_cmd(
+                [
+                    "smartctl",
+                    "-H",
+                    "--json",
+                    device_info.device,
+                ],
+                sudo=True,
+                check=False,
             )
-            if output["smart_status"]["status"] == "PASSED":
+            output = json.loads(res.stdout)
+            if res.returncode != 0:
+                error_msgs.extend(
+                    msg["string"] for msg in output["smartctl"]["messages"]
+                )
+                continue
+            if output["smart_status"]["passed"]:
                 healthy_devices.append(device_info.device)
             else:
                 unhealthy_devices.append(device_info.device)
 
     def log_status(devices, status):
+        if not devices:
+            return
         devices = "\n".join(sorted(map(str, devices)))
         log_msg(f"{status} devices: {devices}", host=host)
 

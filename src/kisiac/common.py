@@ -90,7 +90,7 @@ def cmd_to_str(*cmds: list[str]) -> str:
 
 
 def run_cmd(
-    cmd: list[str],
+    cmd: list[str | Path],
     input: str | None = None,
     host: str = "localhost",
     env: dict[str, Any] | None = None,
@@ -124,8 +124,11 @@ def run_cmd(
         if user_error:
             if user_error_msg:
                 user_error_msg += ": "
+            err = e.stderr
+            if not err:
+                err = e.stdout
             raise UserError(
-                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {e.stderr}"
+                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {err}"
             ) from e
         else:
             raise

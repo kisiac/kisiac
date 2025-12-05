@@ -2,6 +2,7 @@ import json
 
 from kisiac.common import UserError, exists_cmd, log_msg, run_cmd
 from kisiac.filesystems import DeviceInfos
+from kisiac.lvm import LVMSetup
 
 
 def check_host(host: str) -> None:
@@ -44,3 +45,8 @@ def check_host(host: str) -> None:
 
     log_status(unhealthy_devices, "Unhealthy")
     log_status(healthy_devices, "Healthy")
+
+    lvm = LVMSetup.from_system(host)
+    missing_pvs = "\n".join(sorted(str(pv.device) for pv in lvm.missing_pvs))
+    if missing_pvs:
+        log_msg(f"Missing PVs (disk failures?): {missing_pvs}", host=host)

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/kisiac/kisiac/compare/v1.2.0...v1.3.0) (2025-12-05)
+
+
+### Features
+
+* specify encryption via mapping ([#10](https://github.com/kisiac/kisiac/issues/10)) ([8682a79](https://github.com/kisiac/kisiac/commit/8682a7991ab71e3133274856b1026e7ab38e68f1))
+
 ## [1.2.0](https://github.com/kisiac/kisiac/compare/v1.1.0...v1.2.0) (2025-12-04)
 
 

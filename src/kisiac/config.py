@@ -62,7 +62,7 @@ class Filesystem:
     device: Path | None
     label: str | None
     uuid: str | None
-    fstype: str
+    fs_type: str
     mountpoint: Path | None
     options: str | None
     dump: int
@@ -95,7 +95,7 @@ class Filesystem:
             device=device,
             label=label,
             uuid=uuid,
-            fstype=entry.type,
+            fs_type=entry.type,
             mountpoint=Path(entry.dir) if entry.dir is not None else None,
             options=entry.options,
             dump=entry.dump or 0,
@@ -106,7 +106,7 @@ class Filesystem:
         return FstabEntry(
             _device=str(self.device or self.label or self.uuid),
             _dir=str(self.mountpoint) if self.mountpoint is not None else None,
-            _type=self.fstype,
+            _type=self.fs_type,
             _options=self.options,
             _dump=self.dump,
             _fsck=self.fsck,
@@ -416,14 +416,14 @@ class Config(Singleton):
                     device=Path(device) if device is not None else None,
                     label=settings.get("label"),
                     uuid=settings.get("uuid"),
-                    fstype=settings["type"],
+                    fs_type=settings["type"],
                     mountpoint=settings["mount"],
                     options=settings.get("options", ""),
                     dump=settings.get("dump", 0),
                     fsck=settings.get("pass", 2),
                 )
             )
-        if any(filesystem.fstype == "swap" for filesystem in entries) and any(
+        if any(filesystem.fs_type == "swap" for filesystem in entries) and any(
             self.encryption
         ):
             raise UserError(

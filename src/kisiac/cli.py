@@ -1,7 +1,9 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from kisiac.check import check_host
 from kisiac.common import UserError, log_msg
 from kisiac.runtime_settings import (
+    CheckHostSettings,
     GlobalSettings,
     UpdateHostSettings,
 )
@@ -25,6 +27,13 @@ def get_argument_parser() -> ArgumentParser:
         description="Setup the kisiac configuration",
     )
 
+    check_hosts = subparsers.add_parser(
+        "check-hosts",
+        help="Check the system healthiness",
+        description="Check the system healthiness",
+    )
+    CheckHostSettings.register_cli_args(check_hosts)
+
     return parser
 
 
@@ -40,6 +49,10 @@ def main() -> None:
                     update_host(host)
             case "setup-config":
                 setup_config()
+            case "check-hosts":
+                CheckHostSettings.from_cli_args(args)
+                for host in CheckHostSettings.get_instance().hosts:
+                    check_host(host)
             case _:
                 parser.print_help()
     except UserError as e:

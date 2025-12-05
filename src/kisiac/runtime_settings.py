@@ -78,3 +78,16 @@ class UpdateHostSettings(SettingsBase):
             "metavar": "HOST",
         },
     )
+
+
+@dataclass
+class CheckHostSettings(SettingsBase):
+    hosts: list[str] = field(
+        default_factory=lambda: ["localhost"],
+        metadata={
+            "required": True,
+            "positional": True,
+            "help": "Hosts to check (default: localhost)",
+            "metavar": "HOST",
+        },
+    )

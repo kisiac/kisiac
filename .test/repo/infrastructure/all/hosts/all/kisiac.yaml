@@ -51,6 +51,7 @@ user_software:
 
 system_software:
   - stress-ng
+  - smartmontools
 
 messages:
   - >

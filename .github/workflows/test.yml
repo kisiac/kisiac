@@ -58,3 +58,7 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           kisiac --non-interactive update-hosts --skip-system-upgrade localhost
+      - name: check-hosts
+        shell: pixi run bash -e {0}
+        run: |
+          kisiac --non-interactive check-hosts localhost

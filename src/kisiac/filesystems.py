@@ -20,8 +20,10 @@ def update_filesystems(host: str) -> None:
     mkfs_cmds = []
     for filesystem in filesystems:
         device_info = device_infos.get_info(filesystem)
-        if device_info.fstype != filesystem.fstype:
-            mkfs_cmds.append(["mkfs", "-t", filesystem.fstype, str(device_info.device)])
+        if device_info.fs_type != filesystem.fs_type:
+            mkfs_cmds.append(
+                ["mkfs", "-t", filesystem.fs_type, str(device_info.device)]
+            )
 
     # Second, update /etc/fstab.
     fstab_path = HostAgnosticPath("/etc/fstab", host=host, sudo=True)
@@ -94,7 +96,8 @@ def update_permissions(host: str) -> None:
 @dataclass
 class DeviceInfo:
     device: Path
-    fstype: str | None
+    device_type: str
+    fs_type: str | None
     label: str | None
     uuid: str | None
     children: list[Self] = field(default_factory=list)
@@ -119,7 +122,13 @@ class DeviceInfos:
     def __init__(self, host: str) -> None:
         lsblk_output = json.loads(
             run_cmd(
-                ["lsblk", "--json", "--path", "--fs"],
+                [
+                    "lsblk",
+                    "--json",
+                    "--paths",
+                    "--output",
+                    "NAME,FSTYPE,LABEL,UUID,TYPE",
+                ],
                 sudo=True,
                 host=host,
             ).stdout
@@ -130,7 +139,8 @@ class DeviceInfos:
             device = Path(entry["name"])
             device_info = DeviceInfo(
                 device=device,
-                fstype=entry["fstype"],
+                device_type=entry["type"],
+                fs_type=entry["fstype"],
                 label=entry["label"],
                 uuid=entry["uuid"],
             )

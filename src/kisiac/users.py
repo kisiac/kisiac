@@ -1,7 +1,7 @@
 import grp
 import pwd
 
-from kisiac.common import HostAgnosticPath, log_action, run_cmd
+from kisiac.common import HostAgnosticPath, log_msg, run_cmd
 from kisiac.config import Config
 
 
@@ -39,7 +39,7 @@ def setup_users(host: str) -> None:
                 sudo=True,
             )
         else:
-            log_action("Updating user", user.username)
+            log_msg("Updating user", user.username, host=host)
 
         sshdir = HostAgnosticPath(f"~{user.username}/.ssh", host=host, sudo=True)
         sshdir.mkdir()

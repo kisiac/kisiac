@@ -2,9 +2,6 @@ from pathlib import Path
 import subprocess as sp
 import sys
 from typing import Any, Callable, Self, Sequence
-import importlib
-import re
-import textwrap
 import os
 
 import inquirer
@@ -82,12 +79,10 @@ def exists_cmd(cmd: str, host: str, sudo: bool) -> bool:
         return False
 
 
-def log_msg(*msgs: Any) -> None:
+def log_msg(*msgs: Any, host: str | None = None) -> None:
+    if host is not None:
+        msgs = [f"[{host}]", *msgs]
     print(" ".join(map(str, msgs)), file=sys.stderr)
-
-
-def log_action(host: str, *msgs: Any) -> None:
-    log_msg(f"[{host}]", *msgs)
 
 
 def cmd_to_str(*cmds: list[str]) -> str:
@@ -95,7 +90,7 @@ def cmd_to_str(*cmds: list[str]) -> str:
 
 
 def run_cmd(
-    cmd: list[str],
+    cmd: list[str | Path],
     input: str | None = None,
     host: str = "localhost",
     env: dict[str, Any] | None = None,
@@ -114,7 +109,7 @@ def run_cmd(
             cmd = ["ssh", host, f"sudo bash -c '{' '.join(cmd)}'"]
         else:
             cmd = ["ssh", host, f"{' '.join(cmd)}"]
-    log_action(host, "Running command", cmd_to_str(cmd))
+    log_msg("Running command", cmd_to_str(cmd), host=host)
     try:
         return sp.run(
             cmd,
@@ -129,8 +124,11 @@ def run_cmd(
         if user_error:
             if user_error_msg:
                 user_error_msg += ": "
+            err = e.stderr
+            if not err:
+                err = e.stdout
             raise UserError(
-                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {e.stderr}"
+                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {err}"
             ) from e
         else:
             raise
@@ -148,32 +146,6 @@ def check_type(item: str, value: Any, expected_type: Any) -> None:
             f"Expecting {expected_type} for {item}, found "
             f"value {value} of type {type(value)}."
         )
-
-
-module_import_re: re.Pattern = re.compile(
-    r"from kisiac.(?P<module>[a-z0-9_]+) import [a-zA-Z0-0_,+]"
-)
-
-
-def func_to_sh(func: Callable) -> str:
-    func_name = func.__name__
-    module_code = get_module_code(func.__module__)
-    return textwrap.dedent(f"""
-    {module_code}
-    {func_name}()
-    """)
-
-
-def get_module_code(module_name: str) -> str:
-    module_path = importlib.import_module(module_name).__file__
-    assert module_path is not None
-
-    with open(module_path, mode="r") as f:
-        module_code = module_import_re.sub(
-            lambda match: get_module_code(f"kisiac.{match.group('module')}"), f.read()
-        )
-
-    return module_code
 
 
 class HostAgnosticPath:

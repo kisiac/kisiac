@@ -4,7 +4,7 @@ from kisiac.common import (
     UserError,
     cmd_to_str,
     confirm_action,
-    log_action,
+    log_msg,
     provide_password,
     run_cmd,
 )
@@ -48,7 +48,7 @@ def setup_config() -> None:
 def update_host(host: str) -> None:
     config = Config.get_instance()
     for file in config.files.get_files(user=None):
-        log_action(host, "Updating system file", file.target_path)
+        log_msg("Updating system file", file.target_path, host=host)
         file.write(overwrite_existing=True, host=host, sudo=True)
 
     update_system_packages(host)
@@ -62,7 +62,7 @@ def update_host(host: str) -> None:
     users.setup_users(host=host)
     for user in config.users:
         for file in config.files.get_files(user.username):
-            log_action(host, "Updating user file", file.target_path)
+            log_msg("Updating user file", file.target_path, host=host)
             # If the user already has the files, we leave him the new file as a
             # template next to the actual file, with the suffix '.updated'.
             user.fix_permissions(
@@ -258,18 +258,18 @@ def update_lvm(host: str) -> None:
 
             if not lv_current.is_same_size(lv_desired):
                 if lv_desired.fills_vg():
-                    log_action(host, f"Ensuring that LV {lv_desired.name} fills VG.")
+                    log_msg(f"Ensuring that LV {lv_desired.name} fills VG.", host=host)
                 else:
-                    log_action(
-                        host,
+                    log_msg(
                         f"Resizing LV {lv_desired.name} from {lv_current.size} to "
                         f"{lv_desired.size}",
+                        host=host,
                     )
 
                 device_info = device_infos.get_info_for_device(
                     vg_desired.get_lv_device(lv_desired.name)
                 )
-                resize_fs = ["--resizefs"] if device_info.fstype is not None else []
+                resize_fs = ["--resizefs"] if device_info.fs_type is not None else []
 
                 cmds.append(
                     [

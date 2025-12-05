@@ -129,11 +129,12 @@ class LVMSetup:
 
         vg_data = json.loads(
             run_cmd(
-                ["vgs", "--options", "vg_name", "--reportformat", "json"],
+                ["vgs", "--options", "vg_name,devices", "--reportformat", "json"],
                 host=host,
                 sudo=True,
             ).stdout
         )["report"][0]["vg"]
+        print(vg_data)
 
         pv_data = json.loads(
             run_cmd(

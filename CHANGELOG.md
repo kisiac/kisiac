@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/kisiac/kisiac/compare/v1.3.0...v1.4.0) (2025-12-06)
+
+
+### Features
+
+* check-hosts ([#12](https://github.com/kisiac/kisiac/issues/12)) ([97ae217](https://github.com/kisiac/kisiac/commit/97ae21745a1bb3d89c3790fe4fed246dfffe59a8))
+* show missing pvs ([#14](https://github.com/kisiac/kisiac/issues/14)) ([52a29e1](https://github.com/kisiac/kisiac/commit/52a29e18ddf05dfeed397a2e5d6cc5b9fbc42bc9))
+
 ## [1.3.0](https://github.com/kisiac/kisiac/compare/v1.2.0...v1.3.0) (2025-12-05)
 
 

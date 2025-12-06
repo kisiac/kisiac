@@ -11,7 +11,7 @@ from kisiac.common import check_type, exists_cmd, run_cmd
 
 
 CRYPT_PREFIX = "crypt_"
-VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\(?P<info>.+\)$")
+VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\((?P<info>.+)\)$")
 
 
 @dataclass(frozen=True)

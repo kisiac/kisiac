@@ -5,6 +5,7 @@ from kisiac.common import (
     cmd_to_str,
     confirm_action,
     log_msg,
+    multiline_input,
     provide_password,
     run_cmd,
 )
@@ -14,8 +15,6 @@ from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac import users
 from kisiac.config import Config
 from kisiac.lvm import LVMSetup
-
-import inquirer
 
 
 default_system_software = [
@@ -32,16 +31,9 @@ def setup_config() -> None:
     if GlobalSettings.get_instance().non_interactive:
         content = sys.stdin.read()
     else:
-        answers = inquirer.prompt(
-            [
-                inquirer.Text(
-                    "secret_config",
-                    message="Paste the secret configuration (YAML format), including the repo key",
-                ),
-            ]
+        content = multiline_input(
+            "Paste the initial configuration (YAML format), including the repo key."
         )
-        assert answers is not None
-        content = answers["secret_config"]
     HostAgnosticPath("/etc/kisiac.yaml", sudo=True).write_text(content)
 
 

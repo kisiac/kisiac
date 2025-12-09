@@ -10,6 +10,16 @@ import inquirer
 cache = Path("~/.cache/kisiac").expanduser()
 
 
+def multiline_input(msg: str) -> str:
+    lines = []
+    print(msg, "Hit Ctrl+D to finish.")
+    while True:
+        try:
+            lines.append(input())
+        except EOFError:
+            return "\n".join(lines)
+
+
 def handle_key_error(msg: str) -> Callable:
     def decoator(func: Callable) -> Callable:
         def wrapper(*args: Any, **kwargs: Any) -> Any:

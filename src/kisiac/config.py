@@ -394,7 +394,7 @@ class Config(Singleton):
 
     @property
     def encryption(self) -> EncryptionSetup:
-        encryption = self.get("encryption", default={})
+        encryption = self.get("encryption", default=[])
         return EncryptionSetup.from_config(encryption)
 
     @property

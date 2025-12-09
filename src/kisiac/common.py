@@ -100,7 +100,7 @@ def cmd_to_str(*cmds: list[str]) -> str:
 
 
 def run_cmd(
-    cmd: list[str | Path],
+    cmd: Sequence[str | Path],
     input: str | None = None,
     host: str = "localhost",
     env: dict[str, Any] | None = None,

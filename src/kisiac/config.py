@@ -38,6 +38,7 @@ class Package:
     desc: str
     with_pkgs: list[str]
     post_install: str | None
+    channels: list[str]
 
     @property
     def cmd(self) -> str:
@@ -46,11 +47,12 @@ class Package:
     @property
     def install_cmd(self) -> str:
         supplement = " ".join(f"--with {pkg}" for pkg in self.with_pkgs)
+        channels = " ".join(f"--channel {channel}" for channel in self.channels)
 
         if self.post_install:
             supplement += " && ".join(self.post_install.splitlines())
 
-        return f"pixi global install {self.name} {supplement}"
+        return f"pixi global install {channels} {self.name} {supplement}"
 
 
 class FileType(Enum):
@@ -157,6 +159,7 @@ class File:
     def chmod(self, host: str, *mode: str) -> None:
         target_path = HostAgnosticPath(self.target_path, host=host, sudo=True)
         target_path.chmod(*mode)
+
 
 class Files:
     def __init__(self, config: "Config") -> None:
@@ -392,6 +395,7 @@ class Config(Singleton):
                     desc=entry["desc"],
                     with_pkgs=with_pkgs,
                     post_install=entry.get("post_install"),
+                    channels=entry.get("channels", []),
                 )
             except KeyError as e:
                 raise UserError(f"Missing {e} in user_software definition.")

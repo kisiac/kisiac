@@ -10,7 +10,7 @@ from kisiac.common import (
     run_cmd,
 )
 from kisiac.encryption import EncryptionSetup
-from kisiac.filesystems import DeviceInfos, update_filesystems
+from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
 from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac import users
 from kisiac.config import Config
@@ -24,6 +24,7 @@ default_system_software = [
     "e2fsprogs",
     "xfsprogs",
     "btrfs-progs",
+    "smartmontools",
 ]
 
 
@@ -52,6 +53,8 @@ def update_host(host: str) -> None:
 
     update_filesystems(host)
 
+    update_permissions(host)
+
     users.setup_users(host=host)
     for user in config.users:
         for file in config.files.get_files(user.username):
@@ -61,6 +64,8 @@ def update_host(host: str) -> None:
             user.fix_permissions(
                 file.write(overwrite_existing=False, host=host, sudo=True), host=host
             )
+
+    run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
 
 
 def update_system_packages(host: str) -> None:
@@ -244,7 +249,10 @@ def update_lvm(host: str) -> None:
             if not lv_current.is_same_size(lv_desired):
                 if lv_desired.fills_vg():
                     # TODO implement this by querying!
-                    log_msg(f"Ensuring that LV {lv_desired.name} fills VG has to be done manually for now.", host=host)
+                    log_msg(
+                        f"Ensuring that LV {lv_desired.name} fills VG has to be done manually for now.",
+                        host=host,
+                    )
                 else:
                     log_msg(
                         f"Resizing LV {lv_desired.name} from {lv_current.size} to "
@@ -255,7 +263,9 @@ def update_lvm(host: str) -> None:
                     device_info = device_infos.get_info_for_device(
                         vg_desired.get_lv_device(lv_desired.name)
                     )
-                    resize_fs = ["--resizefs"] if device_info.fs_type is not None else []
+                    resize_fs = (
+                        ["--resizefs"] if device_info.fs_type is not None else []
+                    )
 
                     cmds.append(
                         [

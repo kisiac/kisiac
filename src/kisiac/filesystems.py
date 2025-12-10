@@ -29,12 +29,6 @@ def update_filesystems(host: str) -> None:
     fstab_path = HostAgnosticPath("/etc/fstab", host=host, sudo=True)
     old_fstab = Fstab().read_string(fstab_path.read_text())
 
-    previous_entries = {
-        Filesystem.from_fstab_entry(entry) for entry in old_fstab.entries
-    }
-
-    unchanged_entries = previous_entries & filesystems
-    change_or_remove_msg = "\n".join(map(str, previous_entries - unchanged_entries))
     mkfs_cmds_msg = "\n".join(" ".join(cmd) for cmd in mkfs_cmds)
 
     new_fstab = Fstab()
@@ -56,6 +50,11 @@ def update_filesystems(host: str) -> None:
             filesystem.to_fstab_entry() for filesystem in sorted(filesystems)
         ]
         fstab_path.write_text(new_fstab.write_string())
+
+    for filesystem in filesystems:
+        if filesystem.mountpoint is not None:
+            run_cmd(["mkdir", "-p", filesystem.mountpoint], host=host, sudo=True)
+            run_cmd(["mount", "--all"], host=host, sudo=True)
 
 
 def update_permissions(host: str) -> None:

@@ -120,6 +120,12 @@ class DeviceInfo:
 
 class DeviceInfos:
     def __init__(self, host: str) -> None:
+        self.infos: list[DeviceInfo] = []
+        self.host = host
+        self._from_system(update=True)
+
+    def _from_system(self,  update: bool, device: Path | None = None) -> DeviceInfo | None:
+        typo_hint = "Typo in the device name?" if device else ""
         lsblk_output = json.loads(
             run_cmd(
                 [
@@ -128,39 +134,46 @@ class DeviceInfos:
                     "--paths",
                     "--output",
                     "NAME,FSTYPE,LABEL,UUID,TYPE",
+                    *([device] if device else []),
                 ],
                 sudo=True,
-                host=host,
+                host=self.host,
+                user_error_msg=f"Unable to retrieve device info.{typo_hint}"
             ).stdout
         )
-        self.infos: list[DeviceInfo] = []
 
         def parse_entry(entry: dict[str, Any]) -> DeviceInfo:
-            device = Path(entry["name"])
+            reported_device = Path(entry["name"])
             device_info = DeviceInfo(
-                device=device,
+                device=reported_device,
                 device_type=entry["type"],
                 fs_type=entry["fstype"],
                 label=entry["label"],
                 uuid=entry["uuid"],
             )
-            self.infos.append(device_info)
-            if device.is_relative_to(Path("/dev/mapper")):
-                # also add /dev/vgname/lvname path for LVM logical volumes
-                device = Path("/dev") / re.sub(
-                    r"(?P<pre>[^-])-(?P<post>[^-])",
-                    r"\g<pre>/\g<post>",
-                    device.name,
-                    count=1,
-                ).replace("--", "-")
-                self.infos.append(device_info.with_device(Path(device)))
+            if update:
+                self.infos.append(device_info)
+                if reported_device.is_relative_to(Path("/dev/mapper")):
+                    # also add /dev/vgname/lvname path for LVM logical volumes
+                    reported_device = Path("/dev") / re.sub(
+                        r"(?P<pre>[^-])-(?P<post>[^-])",
+                        r"\g<pre>/\g<post>",
+                        reported_device.name,
+                        count=1,
+                    ).replace("--", "-")
+                    self.infos.append(device_info.with_device(Path(reported_device)))
 
             for child in entry.get("children", []):
                 device_info.children.append(parse_entry(child))
             return device_info
 
+        device_info = None
         for entry in lsblk_output["blockdevices"]:
-            parse_entry(entry)
+            device_info = parse_entry(entry)
+
+        if device is not None:
+            assert device_info is not None
+            return device_info
 
     def get_info(self, filesystem: Filesystem) -> DeviceInfo:
         for info in self.infos:
@@ -172,10 +185,17 @@ class DeviceInfos:
         )
 
     def get_info_for_device(self, device: Path) -> DeviceInfo:
-        for info in self.infos:
-            if info.device == device:
-                return info
-        raise UserError(f"No device info found for device {device}")
+        def find_device() -> DeviceInfo | None:
+            for info in self.infos:
+                if info.device == device:
+                    return info
+        found_device = find_device()
+        if found_device is None:
+            found_device = self._from_system(update=False, device=device)
+            assert found_device is not None
+            return found_device
+
+        return found_device
 
     def __iter__(self) -> Iterator[DeviceInfo]:
         return iter(self.infos)

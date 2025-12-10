@@ -71,12 +71,15 @@ class EncryptionSetup:
         return cls(encryptions=encryptions)
 
     @classmethod
-    def from_system(cls, host: str) -> Self:
+    def from_system(cls, host: str, desired: Self) -> Self:
         from kisiac.filesystems import DeviceInfos
+        device_infos = DeviceInfos(host)
+
+        desired_by_name = desired.by_name()
 
         encryptions = set()
         luks_devices = [
-            device for device in DeviceInfos(host) if device.fs_type == "crypto_LUKS"
+            device for device in device_infos if device.fs_type == "crypto_LUKS"
         ]
         for luks_device in luks_devices:
             output = json.loads(
@@ -101,11 +104,21 @@ class EncryptionSetup:
                 if len(luks_device.children) == 1
                 else None
             )
+            device = luks_device.device
+
+            # normalize device name to the desired one
+            if name is not None:
+                desired_encryption = desired_by_name.get(name)
+                if desired_encryption is not None:
+                    device_info = device_infos.get_info_for_device(desired_encryption.device)
+                    if device_info.device == device:
+                        device = desired_encryption.device
+
             # TODO find a way to retrieve the key_size from the system
             encryptions.add(
                 Encryption(
                     name=name,
-                    device=luks_device.device,
+                    device=device,
                     hash=output["keyslots"]["0"]["af"]["hash"],
                     cipher=output["keyslots"]["0"]["area"]["encryption"],
                     key_size=None,

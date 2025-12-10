@@ -20,6 +20,7 @@ from kisiac.common import (
     UserError,
     check_type,
     handle_key_error,
+    log_msg,
 )
 from kisiac.lvm import LVMSetup
 
@@ -158,9 +159,12 @@ class Files:
     def __init__(self, config: "Config") -> None:
         cache_address = base64.b64encode(config.repo.encode()).decode()
         self.repo_cache = cache / cache_address
+        log_msg(f"Config repo cache: {self.repo_cache}")
         self.infrastructure = config.infrastructure
         self.vars = config.vars
         self.user_vars = config.user_vars
+        self._provided_status = {}
+
         if not self.repo_cache.exists():
             self.repo_cache.parent.mkdir(parents=True, exist_ok=True)
             self.repo = git.Repo.clone_from(config.repo, self.repo_cache)
@@ -169,27 +173,39 @@ class Files:
             if self.repo.remotes:
                 # update to latest commit
                 self.repo.remotes.origin.pull()
+        # print latest commit ID of the repo
+        log_msg(f"Config repo updated to commit {self.repo.head.commit.hexsha}")
+
+
+    def _is_provided(self, path: Path) -> bool:
+        provided_status = self._provided_status.get(path)
+        if provided_status is not None:
+            return provided_status
+        provided_status = path.exists()
+        log_msg(f"{path.relative_to(self.repo_cache)}: {'provided' if provided_status else 'not provided'}")
+        self._provided_status[path] = provided_status
+        return provided_status
 
     def infrastructure_stack(self) -> Iterable[Path]:
         base = self.repo_cache / "infrastructure"
         all_path = base / "all"
-        if all_path.exists():
-            yield base / "all"
+        if self._is_provided(all_path):
+            yield all_path
         if self.infrastructure is not None:
             infra_path = base / self.infrastructure
-            if infra_path.exists():
+            if self._is_provided(infra_path):
                 yield infra_path
 
     def host_stack(self) -> Iterable[Path]:
         hostname = platform.node()
         for infra in self.infrastructure_stack():
             base = infra / "hosts"
-            if base.exists():
+            if self._is_provided(base):
                 for entry in base.iterdir():
                     if not entry.is_dir():
                         raise UserError(f"{base} may only contain directories")
                     # yield if all or entry matches hostname
-                    regex = str(entry).replace("*", r".+")
+                    regex = str(entry.name).replace("*", r".+")
                     if entry.name == "all" or re.match(regex, hostname):
                         yield entry
 
@@ -197,7 +213,7 @@ class Files:
         config = {}
         for base in self.host_stack():
             config_path = base / "kisiac.yaml"
-            if config_path.exists():
+            if self._is_provided(config_path):
                 with open(config_path, "r") as f:
                     config.update(load_config(f))
         return config
@@ -404,7 +420,7 @@ class Config(Singleton):
 
     @property
     def filesystems(self) -> list[Filesystem]:
-        filesystems = self.get("filesystems", default={})
+        filesystems = self.get("filesystems", default=[])
         check_type("filesystems key", filesystems, list)
 
         entries = []

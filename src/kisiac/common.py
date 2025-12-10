@@ -47,8 +47,9 @@ def confirm_action(desc: str) -> bool:
     if GlobalSettings.get_instance().non_interactive:
         return True
 
+    log_msg(desc)
     response = inquirer.prompt(
-        [inquirer.Checkbox("action", message=desc, choices=["yes", "no"])]
+        [inquirer.List("action", message="Proceed?", choices=["yes", "no"], default="no")]
     )
     assert response is not None
     return response["action"] == "yes"
@@ -90,9 +91,10 @@ def exists_cmd(cmd: str, host: str, sudo: bool) -> bool:
 
 
 def log_msg(*msgs: Any, host: str | None = None) -> None:
+    ann_msgs = list(msgs)
     if host is not None:
-        msgs = [f"[{host}]", *msgs]
-    print(" ".join(map(str, msgs)), file=sys.stderr)
+        ann_msgs = [f"[{host}]", *msgs]
+    print(" ".join(map(str, ann_msgs)), file=sys.stderr)
 
 
 def cmd_to_str(*cmds: list[str]) -> str:
@@ -110,19 +112,26 @@ def run_cmd(
     check: bool = True,
 ) -> sp.CompletedProcess[str]:
     """Run a system command using subprocess.run and check for errors."""
-    # TODO check quotation!
-    cmd = list(map(str, cmd))
+    def fmt_cmd_item(item: str | Path) -> str:
+        str_item = str(item)
+        if " " in str_item or "\t" in str_item:
+            if '"' in str_item:
+                raise UserError(f"command item {str_item} contains \"-characters. This is currently not supported.")
+            str_item = f'"{str_item}"'
+        return str_item
+
+    postprocesed_cmd: Sequence[str] = list(map(fmt_cmd_item, cmd))
     if sudo:
-        cmd = ["sudo", "bash", "-c", f"{' '.join(cmd)}"]
+        postprocesed_cmd = ["sudo", "bash", "-c", f"{' '.join(postprocesed_cmd)}"]
     if host != "localhost":
         if sudo:
-            cmd = ["ssh", host, f"sudo bash -c '{' '.join(cmd)}'"]
+            postprocesed_cmd = ["ssh", host, f"sudo bash -c '{' '.join(postprocesed_cmd)}'"]
         else:
-            cmd = ["ssh", host, f"{' '.join(cmd)}"]
-    log_msg("Running command", cmd_to_str(cmd), host=host)
+            postprocesed_cmd = ["ssh", host, f"{' '.join(postprocesed_cmd)}"]
+    log_msg("Running command", cmd_to_str(postprocesed_cmd), host=host)
     try:
         return sp.run(
-            cmd,
+            postprocesed_cmd,
             check=check,
             text=True,
             stdout=sp.PIPE,
@@ -138,7 +147,7 @@ def run_cmd(
             if not err:
                 err = e.stdout
             raise UserError(
-                f"{user_error_msg}Error occurred while running command '{' '.join(cmd)}': {err}"
+                f"{user_error_msg}Error occurred while running command '{' '.join(postprocesed_cmd)}': {err}"
             ) from e
         else:
             raise

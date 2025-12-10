@@ -76,9 +76,8 @@ def update_system_packages(host: str) -> None:
 
 def update_encryptions(host: str) -> None:
     desired = Config.get_instance().encryption
-    current = EncryptionSetup.from_system(host=host)
+    current = EncryptionSetup.from_system(host=host, desired=desired)
 
-    desired_by_name = desired.by_name()
     current_by_device = current.by_device()
     current_by_name = current.by_name()
 
@@ -133,9 +132,7 @@ def update_encryptions(host: str) -> None:
         return provide_password("Provide encryption password.")
 
     if format_cmds and confirm_action(
-        f"The following cryptsetup commands will be executed:\n{cmd_msg}\n"
-        "\nProceed? If answering no, consider making the changes manually or "
-        "adjust the kisiac encryption configuration."
+        f"The following cryptsetup commands will be executed:\n{cmd_msg}"
     ):
         error_msg = "Incomplete encryption update due to error (make sure to manually fix this!)"
         password = get_password()
@@ -153,11 +150,8 @@ def update_encryptions(host: str) -> None:
         if encryption.name in current_by_name
         and current_by_name[encryption.name].device != encryption.device
     ]
-    encryptions_to_close = [
-        encryption for encryption in current if encryption.name not in desired_by_name
-    ]
 
-    if encryptions_to_open or encryptions_to_reopen or encryptions_to_close:
+    if encryptions_to_open or encryptions_to_reopen:
         if password is None:
             password = get_password()
 
@@ -166,8 +160,6 @@ def update_encryptions(host: str) -> None:
         for encryption in encryptions_to_reopen:
             encryption.close(host)
             encryption.open(host, password)
-        for encryption in encryptions_to_close:
-            encryption.close(host)
 
 
 def update_lvm(host: str) -> None:
@@ -181,7 +173,7 @@ def update_lvm(host: str) -> None:
         [
             "lvremove",
             "--yes",
-            f"{vg.name}/{lv}",
+            f"{vg.name}/{lv.name}",
         ]
         for vg in current.vgs.values()
         for lv in vg.lvs.values()

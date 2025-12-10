@@ -124,7 +124,9 @@ class DeviceInfos:
         self.host = host
         self._from_system(update=True)
 
-    def _from_system(self,  update: bool, device: Path | None = None) -> DeviceInfo | None:
+    def _from_system(
+        self, update: bool, device: Path | None = None
+    ) -> DeviceInfo | None:
         typo_hint = "Typo in the device name?" if device else ""
         lsblk_output = json.loads(
             run_cmd(
@@ -138,7 +140,7 @@ class DeviceInfos:
                 ],
                 sudo=True,
                 host=self.host,
-                user_error_msg=f"Unable to retrieve device info.{typo_hint}"
+                user_error_msg=f"Unable to retrieve device info.{typo_hint}",
             ).stdout
         )
 
@@ -189,6 +191,7 @@ class DeviceInfos:
             for info in self.infos:
                 if info.device == device:
                     return info
+
         found_device = find_device()
         if found_device is None:
             found_device = self._from_system(update=False, device=device)

@@ -49,7 +49,11 @@ def confirm_action(desc: str) -> bool:
 
     log_msg(desc)
     response = inquirer.prompt(
-        [inquirer.List("action", message="Proceed?", choices=["yes", "no"], default="no")]
+        [
+            inquirer.List(
+                "action", message="Proceed?", choices=["yes", "no"], default="no"
+            )
+        ]
     )
     assert response is not None
     return response["action"] == "yes"
@@ -112,11 +116,14 @@ def run_cmd(
     check: bool = True,
 ) -> sp.CompletedProcess[str]:
     """Run a system command using subprocess.run and check for errors."""
+
     def fmt_cmd_item(item: str | Path) -> str:
         str_item = str(item)
         if " " in str_item or "\t" in str_item:
             if '"' in str_item:
-                raise UserError(f"command item {str_item} contains \"-characters. This is currently not supported.")
+                raise UserError(
+                    f'command item {str_item} contains "-characters. This is currently not supported.'
+                )
             str_item = f'"{str_item}"'
         return str_item
 
@@ -125,7 +132,11 @@ def run_cmd(
         postprocesed_cmd = ["sudo", "bash", "-c", f"{' '.join(postprocesed_cmd)}"]
     if host != "localhost":
         if sudo:
-            postprocesed_cmd = ["ssh", host, f"sudo bash -c '{' '.join(postprocesed_cmd)}'"]
+            postprocesed_cmd = [
+                "ssh",
+                host,
+                f"sudo bash -c '{' '.join(postprocesed_cmd)}'",
+            ]
         else:
             postprocesed_cmd = ["ssh", host, f"{' '.join(postprocesed_cmd)}"]
     log_msg("Running command", cmd_to_str(postprocesed_cmd), host=host)

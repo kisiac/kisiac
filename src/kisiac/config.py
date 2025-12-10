@@ -176,13 +176,14 @@ class Files:
         # print latest commit ID of the repo
         log_msg(f"Config repo updated to commit {self.repo.head.commit.hexsha}")
 
-
     def _is_provided(self, path: Path) -> bool:
         provided_status = self._provided_status.get(path)
         if provided_status is not None:
             return provided_status
         provided_status = path.exists()
-        log_msg(f"{path.relative_to(self.repo_cache)}: {'provided' if provided_status else 'not provided'}")
+        log_msg(
+            f"{path.relative_to(self.repo_cache)}: {'provided' if provided_status else 'not provided'}"
+        )
         self._provided_status[path] = provided_status
         return provided_status
 

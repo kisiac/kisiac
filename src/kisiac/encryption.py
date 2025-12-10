@@ -73,6 +73,7 @@ class EncryptionSetup:
     @classmethod
     def from_system(cls, host: str, desired: Self) -> Self:
         from kisiac.filesystems import DeviceInfos
+
         device_infos = DeviceInfos(host)
 
         desired_by_name = desired.by_name()
@@ -110,7 +111,9 @@ class EncryptionSetup:
             if name is not None:
                 desired_encryption = desired_by_name.get(name)
                 if desired_encryption is not None:
-                    device_info = device_infos.get_info_for_device(desired_encryption.device)
+                    device_info = device_infos.get_info_for_device(
+                        desired_encryption.device
+                    )
                     if device_info.device == device:
                         device = desired_encryption.device
 

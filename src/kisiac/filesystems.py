@@ -37,13 +37,20 @@ def update_filesystems(host: str) -> None:
     change_or_remove_msg = "\n".join(map(str, previous_entries - unchanged_entries))
     mkfs_cmds_msg = "\n".join(" ".join(cmd) for cmd in mkfs_cmds)
 
-    if confirm_action(
+    new_fstab = Fstab()
+    new_fstab.entries = [
+        filesystem.to_fstab_entry() for filesystem in sorted(filesystems)
+    ]
+
+    if mkfs_cmds and confirm_action(
         f"The following mkfs commands will be executed:\n{mkfs_cmds_msg}"
-        f"\nThe following fstab entries will be changed or removed:\n{change_or_remove_msg}"
     ):
         for cmd in mkfs_cmds:
             run_cmd(cmd, sudo=True, host=host)
 
+    if str(new_fstab) != str(old_fstab) and confirm_action(
+        f"\nThe following will be the new fstab:\n{new_fstab.write_string()}"
+    ):
         new_fstab = Fstab()
         new_fstab.entries = [
             filesystem.to_fstab_entry() for filesystem in sorted(filesystems)
@@ -101,16 +108,6 @@ class DeviceInfo:
     label: str | None
     uuid: str | None
     children: list[Self] = field(default_factory=list)
-
-    def is_targeted_by_filesystem(self, filesystem: Filesystem) -> bool:
-        if filesystem.device is not None:
-            return self.device == filesystem.device
-        elif filesystem.label is not None:
-            return self.label == filesystem.label
-        elif filesystem.uuid is not None:
-            return self.uuid == filesystem.uuid
-        else:
-            return False
 
     def with_device(self, device: Path) -> Self:
         info = copy(self)
@@ -178,9 +175,21 @@ class DeviceInfos:
             return device_info
 
     def get_info(self, filesystem: Filesystem) -> DeviceInfo:
+        def is_targeted_by_filesystem(device_info: DeviceInfo) -> bool:
+            if filesystem.label is not None:
+                return device_info.label == filesystem.label
+            elif filesystem.uuid is not None:
+                return device_info.uuid == filesystem.uuid
+            else:
+                return False
+
+        if filesystem.device is not None:
+            return self.get_info_for_device(filesystem.device)
+
         for info in self.infos:
-            if info.is_targeted_by_filesystem(filesystem):
+            if is_targeted_by_filesystem(info):
                 return info
+
         raise UserError(
             f"No device found for filesystem with device={filesystem.device}, "
             f"label={filesystem.label}, uuid={filesystem.uuid}"

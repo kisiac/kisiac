@@ -42,6 +42,7 @@ def update_host(host: str) -> None:
     for file in config.files.get_files(user=None):
         log_msg("Updating system file", file.target_path, host=host)
         file.write(overwrite_existing=True, host=host, sudo=True)
+        file.chmod(host, "u+r", "g+r", "o+r")
 
     update_system_packages(host)
 
@@ -202,7 +203,7 @@ def update_lvm(host: str) -> None:
             *lv.size_arg(),
             vg.name,
             "--type",
-            lv.layout,
+            ",".join(lv.layout),
         ]
         for vg in desired.vgs.values()
         for lv in vg.lvs.values()
@@ -233,7 +234,7 @@ def update_lvm(host: str) -> None:
             lv_current = vg_current.lvs.get(lv_desired.name)
             if lv_current is None:
                 continue
-            if lv_current.layout != lv_desired.layout:
+            if not (lv_desired.layout <= lv_current.layout):
                 raise UserError(
                     f"Cannot change layout of existing LV {lv_desired.name} "
                     f"from {lv_current.layout} to {lv_desired.layout}. "
@@ -242,7 +243,8 @@ def update_lvm(host: str) -> None:
 
             if not lv_current.is_same_size(lv_desired):
                 if lv_desired.fills_vg():
-                    log_msg(f"Ensuring that LV {lv_desired.name} fills VG.", host=host)
+                    # TODO implement this by querying!
+                    log_msg(f"Ensuring that LV {lv_desired.name} fills VG has to be done manually for now.", host=host)
                 else:
                     log_msg(
                         f"Resizing LV {lv_desired.name} from {lv_current.size} to "
@@ -250,22 +252,22 @@ def update_lvm(host: str) -> None:
                         host=host,
                     )
 
-                device_info = device_infos.get_info_for_device(
-                    vg_desired.get_lv_device(lv_desired.name)
-                )
-                resize_fs = ["--resizefs"] if device_info.fs_type is not None else []
+                    device_info = device_infos.get_info_for_device(
+                        vg_desired.get_lv_device(lv_desired.name)
+                    )
+                    resize_fs = ["--resizefs"] if device_info.fs_type is not None else []
 
-                cmds.append(
-                    [
-                        "lvresize",
-                        *resize_fs,
-                        *lv_desired.size_arg(),
-                        f"{vg_desired.name}/{lv_desired.name}",
-                    ]
-                )
+                    cmds.append(
+                        [
+                            "lvresize",
+                            *resize_fs,
+                            *lv_desired.size_arg(),
+                            f"{vg_desired.name}/{lv_desired.name}",
+                        ]
+                    )
     cmd_msg = cmd_to_str(*cmds)
 
-    if confirm_action(
+    if cmds and confirm_action(
         f"The following LVM commands will be executed:\n{cmd_msg}\n"
         "\nProceed? If answering no, consider making the changes manually or "
         "adjust the kisiac LVM configuration."

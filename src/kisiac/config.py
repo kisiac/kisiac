@@ -154,6 +154,9 @@ class File:
         created.append(target_path.path)
         return created
 
+    def chmod(self, host: str, *mode: str) -> None:
+        target_path = HostAgnosticPath(self.target_path, host=host, sudo=True)
+        target_path.chmod(*mode)
 
 class Files:
     def __init__(self, config: "Config") -> None:
@@ -223,22 +226,22 @@ class Files:
         if user is not None:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
+        else:
+            file_type = "system_files"
+            vars = self.vars
 
-            # yield built-in user files
+            # yield built-in system files
             templates = jinja2.Environment(
                 loader=jinja2.PackageLoader("kisiac", "files"),
                 autoescape=jinja2.select_autoescape(),
             )
             content = templates.get_template("kisiac.sh.j2").render(
                 packages=Config.get_instance().user_software,
-                infrastructure_name=Config.get_instance().infrastructure_name,
-                infrastructure_name_len=len(Config.get_instance().infrastructure_name),
+                infrastructure_name=Config.get_instance().infrastructure,
+                infrastructure_name_len=len(Config.get_instance().infrastructure),
                 messages=Config.get_instance().messages,
             )
             yield File(target_path=Path("/etc/profile.d/kisiac.sh"), content=content)
-        else:
-            file_type = "system_files"
-            vars = self.vars
 
         for host in self.host_stack():
             collection = host / file_type
@@ -380,12 +383,14 @@ class Config(Singleton):
         check_type("user_software key", user_software, list)
         for entry in user_software:
             check_type("user_software entry", entry, dict)
+            with_pkgs = entry.get("with", [])
+            check_type("user_software entry, key 'with'", with_pkgs, list)
             try:
                 yield Package(
                     name=entry["pkg"],
                     cmd_spec=entry.get("cmd"),
                     desc=entry["desc"],
-                    with_pkgs=entry.get("with", []),
+                    with_pkgs=with_pkgs,
                     post_install=entry.get("post_install"),
                 )
             except KeyError as e:
@@ -402,12 +407,6 @@ class Config(Singleton):
         messages = self.get("messages", default=[])
         check_type("message key", messages, list)
         return messages
-
-    @property
-    def infrastructure_name(self) -> str:
-        infrastructure_name = self.get("infrastructure_name")
-        check_type("infrastructure_name key", infrastructure_name, str)
-        return infrastructure_name
 
     @property
     def encryption(self) -> EncryptionSetup:

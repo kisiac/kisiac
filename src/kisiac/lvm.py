@@ -22,7 +22,7 @@ class PV:
 @dataclass(frozen=True)
 class LV:
     name: str
-    layout: str
+    layout: set[str]
     size: int | None
 
     def is_same_size(self, other: Self) -> bool:
@@ -39,7 +39,7 @@ class LV:
         return simplify(self.size) == simplify(other.size)
 
     def fills_vg(self) -> bool:
-        return self.size is not None
+        return self.size is None
 
     def size_arg(self) -> list[str]:
         if self.size is None:
@@ -96,7 +96,7 @@ class LVMSetup:
 
                 lvs_entities[lv_name] = LV(
                     name=lv_name,
-                    layout=lv_settings["layout"],
+                    layout={lv_settings["layout"]},
                     size=size,
                 )
 
@@ -159,13 +159,16 @@ class LVMSetup:
 
             pv_obj = PV(device=Path(pv_device))
             entities.pvs.add(pv_obj)
-            entities.vgs[entry["vg_name"]].pvs.add(pv_obj)
+            vg_name = entry["vg_name"]
+            if vg_name:
+                # in case the PV is assigned to a vg
+                entities.vgs[entry["vg_name"]].pvs.add(pv_obj)
 
         for entry in lv_data:
             vg = entities.vgs[entry["vg_name"]]
             vg.lvs[entry["lv_name"]] = LV(
                 name=entry["lv_name"],
-                layout=entry["lv_layout"],
+                layout=set(entry["lv_layout"].split(",")),
                 size=parse_size(entry["lv_size"], binary=True),
             )
         return entities

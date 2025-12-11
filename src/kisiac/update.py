@@ -147,24 +147,18 @@ def update_encryptions(host: str) -> None:
         for cmd in format_cmds:
             run_cmd(cmd, host=host, sudo=True, user_error_msg=error_msg, input=password)
 
+    device_infos = DeviceInfos(host)
     encryptions_to_open = [
-        encryption for encryption in desired if encryption.name not in current_by_name
-    ]
-    encryptions_to_reopen = [
         encryption
         for encryption in desired
-        if encryption.name in current_by_name
-        and current_by_name[encryption.name].device != encryption.device
+        if not device_infos.get_info_for_device(encryption.device).children
     ]
 
-    if encryptions_to_open or encryptions_to_reopen:
+    if encryptions_to_open:
         if password is None:
             password = get_password()
 
         for encryption in encryptions_to_open:
-            encryption.open(host, password)
-        for encryption in encryptions_to_reopen:
-            encryption.close(host)
             encryption.open(host, password)
 
 

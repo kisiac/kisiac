@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import re
+import subprocess as sp
 from typing import Any, Iterator, Self
 from kisiac.common import HostAgnosticPath, UserError, confirm_action, run_cmd
 from kisiac.config import Config, Filesystem, UserSet
@@ -54,7 +55,17 @@ def update_filesystems(host: str) -> None:
     for filesystem in filesystems:
         if filesystem.mountpoint is not None:
             run_cmd(["mkdir", "-p", filesystem.mountpoint], host=host, sudo=True)
-            run_cmd(["mount", "--all"], host=host, sudo=True)
+            try:
+                run_cmd(
+                    ["mount", filesystem.mountpoint],
+                    host=host,
+                    sudo=True,
+                    user_error=False,
+                )
+            except sp.CalledProcessError as e:
+                # returncode 5 means that the item is already mounted
+                if e.returncode != 5:
+                    raise
 
 
 def update_permissions(host: str) -> None:

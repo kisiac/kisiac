@@ -82,46 +82,28 @@ class EncryptionSetup:
         luks_devices = [
             device for device in device_infos if device.fs_type == "crypto_LUKS"
         ]
-        for luks_device in luks_devices:
-            output = json.loads(
-                run_cmd(
-                    [
-                        "cryptsetup",
-                        "luksDump",
-                        "--dump-json-metadata",
-                        str(luks_device.device),
-                    ],
-                    sudo=True,
-                ).stdout
+        for desired_encryption in desired:
+            res = run_cmd(
+                [
+                    "cryptsetup",
+                    "luksDump",
+                    "--dump-json-metadata",
+                    desired_encryption.device,
+                ],
+                sudo=True,
+                check=False,
             )
-            if len(luks_device.children) > 1:
-                raise UserError(
-                    f"Unexpected number of children for LUKS device '{luks_device.device}', "
-                    "expected at most 1. This means that your encryption setup is not yet "
-                    "supported by kisiac."
-                )
-            name = (
-                luks_device.children[0].device.name
-                if len(luks_device.children) == 1
-                else None
-            )
-            device = luks_device.device
+            if res.returncode != 0:
+                # not (yet) a luks device
+                continue
 
-            # normalize device name to the desired one
-            if name is not None:
-                desired_encryption = desired_by_name.get(name)
-                if desired_encryption is not None:
-                    device_info = device_infos.get_info_for_device(
-                        desired_encryption.device
-                    )
-                    if device_info.device == device:
-                        device = desired_encryption.device
+            output = json.loads(res.stdout)
 
             # TODO find a way to retrieve the key_size from the system
             encryptions.add(
                 Encryption(
-                    name=name,
-                    device=device,
+                    name=desired_encryption.name,
+                    device=desired_encryption.device,
                     hash=output["keyslots"]["0"]["af"]["hash"],
                     cipher=output["keyslots"]["0"]["area"]["encryption"],
                     key_size=None,

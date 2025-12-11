@@ -72,16 +72,7 @@ class EncryptionSetup:
 
     @classmethod
     def from_system(cls, host: str, desired: Self) -> Self:
-        from kisiac.filesystems import DeviceInfos
-
-        device_infos = DeviceInfos(host)
-
-        desired_by_name = desired.by_name()
-
         encryptions = set()
-        luks_devices = [
-            device for device in device_infos if device.fs_type == "crypto_LUKS"
-        ]
         for desired_encryption in desired:
             res = run_cmd(
                 [

@@ -50,7 +50,7 @@ class Package:
         channels = " ".join(f"--channel {channel}" for channel in self.channels)
 
         if self.post_install:
-            supplement += " && ".join(self.post_install.splitlines())
+            supplement += " && ".join([supplement, *self.post_install.splitlines()])
 
         return f"pixi global install {channels} {self.name} {supplement}"
 

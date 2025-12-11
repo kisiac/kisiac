@@ -21,6 +21,7 @@ from kisiac.common import (
     check_type,
     handle_key_error,
     log_msg,
+    as_list,
 )
 from kisiac.lvm import LVMSetup
 
@@ -381,6 +382,7 @@ class Config(Singleton):
         return self._files
 
     @property
+    @as_list
     def user_software(self) -> Iterable[Package]:
         user_software = self.get("user_software")
         check_type("user_software key", user_software, list)

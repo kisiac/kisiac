@@ -1,13 +1,20 @@
 from pathlib import Path
 import subprocess as sp
 import sys
-from typing import Any, Callable, Self, Sequence
+from typing import Any, Callable, Iterable, Self, Sequence
 import os
 
 import inquirer
 
 
 cache = Path("~/.cache/kisiac").expanduser()
+
+
+def as_list(method: Callable[..., Iterable]) -> Callable[..., list]:
+    def wrapper(*args: Any, **kwargs: Any) -> list:
+        return list(method(*args, **kwargs))
+
+    return wrapper
 
 
 def multiline_input(msg: str) -> str:

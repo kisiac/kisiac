@@ -4,6 +4,7 @@ from kisiac.common import (
     UserError,
     cmd_to_str,
     confirm_action,
+    is_in_tmux_or_screen,
     log_msg,
     multiline_input,
     provide_password,
@@ -39,6 +40,12 @@ def setup_config() -> None:
 
 
 def update_host(host: str) -> None:
+    if not is_in_tmux_or_screen() and not GlobalSettings.get_instance().non_interactive:
+        raise UserError(
+            "Please run this command in a tmux or screen session in order to "
+            "avoid interrupted updates due to e.g. ssh failure."
+        )
+
     config = Config.get_instance()
     for file in config.files.get_files(user=None):
         log_msg("Updating system file", file.target_path, host=host)
@@ -203,6 +210,7 @@ def update_lvm(host: str) -> None:
             vg.name,
             "--type",
             ",".join(lv.layout),
+            *lv.stripe_args(),
         ]
         for vg in desired.vgs.values()
         for lv in vg.lvs.values()
@@ -233,10 +241,12 @@ def update_lvm(host: str) -> None:
             lv_current = vg_current.lvs.get(lv_desired.name)
             if lv_current is None:
                 continue
-            if not (lv_desired.layout <= lv_current.layout):
+            if not lv_desired.is_same_layout(lv_current):
                 raise UserError(
                     f"Cannot change layout of existing LV {lv_desired.name} "
-                    f"from {lv_current.layout} to {lv_desired.layout}. "
+                    f"from {lv_current.layout}, stripes={lv_current.stripes}, "
+                    f"stripe_size={lv_current.stripe_size} to {lv_desired.layout}, "
+                    f"stripes={lv_desired.stripes}, stripe_size={lv_desired.stripe_size}. "
                     "Perform this action manually and re-run the update."
                 )
 

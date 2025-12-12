@@ -63,8 +63,8 @@ def update_filesystems(host: str) -> None:
                     user_error=False,
                 )
             except sp.CalledProcessError as e:
-                # returncode 5 means that the item is already mounted
-                if e.returncode != 5:
+                # returncode 5 or 32 means that the item is already mounted
+                if e.returncode == 1:
                     raise
 
 

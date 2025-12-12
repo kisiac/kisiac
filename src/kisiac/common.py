@@ -10,6 +10,11 @@ import inquirer
 cache = Path("~/.cache/kisiac").expanduser()
 
 
+def is_in_tmux_or_screen() -> bool:
+    term = os.environ["TERM"]
+    return term.startswith("tmux") or term.startswith("screen")
+
+
 def as_list(method: Callable[..., Iterable]) -> Callable[..., list]:
     def wrapper(*args: Any, **kwargs: Any) -> list:
         return list(method(*args, **kwargs))

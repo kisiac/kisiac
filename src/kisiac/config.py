@@ -267,7 +267,7 @@ class Files:
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
-                    yield File((base / f).relative_to(collection), content)
+                    yield File((base / f), content)
 
 
 @dataclass

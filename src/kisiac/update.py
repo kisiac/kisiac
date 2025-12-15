@@ -60,8 +60,6 @@ def update_host(host: str) -> None:
 
     update_filesystems(host)
 
-    update_permissions(host)
-
     users.setup_users(host=host)
     for user in config.users:
         for file in config.files.get_files(user.username):
@@ -71,6 +69,8 @@ def update_host(host: str) -> None:
             user.fix_permissions(
                 file.write(overwrite_existing=False, host=host, sudo=True), host=host
             )
+
+    update_permissions(host)
 
     run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
 

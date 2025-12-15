@@ -158,7 +158,7 @@ class PermissionFlagHandler:
         )
 
     def _infer_arg(
-        self, prefix: str, sep: str, nothing_flag: str, whitelist: set[str] | None
+        self, prefix: str, sep: str, nothing_flag: str, whitelist: set[str] | None = None
     ) -> str:
         whitelist = set() if whitelist is None else whitelist
         flags = (

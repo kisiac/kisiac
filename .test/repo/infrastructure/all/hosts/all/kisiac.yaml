@@ -98,11 +98,11 @@ permissions:
     setgid: true
     sticky: true
     setuid: true
-    read: user
-    write: user
+    read: owner
+    write: owner
   /tmp/test/exec:
     user: jkoester
     group: koesterlab
-    execute: user
-    read: user
-    write: user
+    execute: owner
+    read: owner
+    write: owner

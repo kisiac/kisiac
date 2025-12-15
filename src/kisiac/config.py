@@ -147,7 +147,7 @@ class File:
             if target_path.read_text() == self.content:
                 return []
             if not overwrite_existing:
-                target_path = target_path.with_suffix(".updated")
+                target_path = target_path.with_suffix(f"{target_path.suffix}.updated")
         created = []
         for ancestor in target_path.parents[::-1][1:]:
             if not ancestor.exists():
@@ -269,7 +269,7 @@ class Files:
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
-                    yield File((base / f), content)
+                    yield File(Path("/") / (base / f).relative_to(collection), content)
 
 
 @dataclass

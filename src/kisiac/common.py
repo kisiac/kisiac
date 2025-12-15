@@ -239,7 +239,7 @@ class HostAgnosticPath:
         self._chperm(
             "setfacl",
             "-m",
-            *("-d" if default else []),
+            *(["-d"] if default else []),
             ",".join(mode),
             recursive=recursive,
         )

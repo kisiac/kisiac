@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/kisiac/kisiac/compare/v1.4.0...v1.4.1) (2025-12-15)
+
+
+### Bug Fixes
+
+* support multiline input in setup-config ([24815ee](https://github.com/kisiac/kisiac/commit/24815eef471ce7dfaa0dbe8a333c917d5c6ad45f))
+
 ## [1.4.0](https://github.com/kisiac/kisiac/compare/v1.3.0...v1.4.0) (2025-12-06)
 
 

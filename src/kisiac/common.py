@@ -235,8 +235,16 @@ class HostAgnosticPath:
         else:
             raise ValueError("Either user or group must be provided.")
 
-    def _chperm(self, cmd: str, arg: str, recursive: bool = True) -> None:
-        args = [arg]
+    def setfacl(self, *mode: str, recursive: bool = True, default: bool = True) -> None:
+        self._chperm(
+            "setfacl",
+            "-m",
+            *("-d" if default else []),
+            ",".join(mode),
+            recursive=recursive,
+        )
+
+    def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
         if recursive and self.is_dir():
             args = ["-R", *args]
         self._run_cmd([cmd, *args, str(self.path)])

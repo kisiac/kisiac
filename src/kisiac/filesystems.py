@@ -69,34 +69,53 @@ def update_filesystems(host: str) -> None:
 
 
 def update_permissions(host: str) -> None:
-    def apply_user_set(user_set: UserSet | None, flag: str) -> list[str]:
-        if user_set is None:
-            return []
-        if user_set == UserSet.owner:
-            return [f"u+{flag}", f"g-{flag}", f"o-{flag}"]
-        elif user_set == UserSet.group:
-            return [f"u+{flag}", f"g+{flag}", f"o-{flag}"]
-        elif user_set == UserSet.others:
-            return [f"u+{flag}", f"g+{flag}", f"o+{flag}"]
-        elif user_set == UserSet.nobody:
-            return [f"u-{flag}", f"g-{flag}", f"o-{flag}"]
-        else:
-            assert False, "unreachable"
-
     permissions = Config.get_instance().permissions
     for path, permissions in permissions.items():
-        path = HostAgnosticPath(path, host=host, sudo=True)
-        chmod_args = []
+        host_path = HostAgnosticPath(path, host=host, sudo=True)
+
+        user_perms = PermissionFlagHandler(prefix="u")
+        group_perms = PermissionFlagHandler(prefix="g")
+        other_perms = PermissionFlagHandler(prefix="o")
+
+        def register_user_set(user_set: UserSet | None, flag: str) -> None:
+            if user_set == UserSet.owner:
+                user_perms.register(flag)
+            elif user_set == UserSet.group:
+                user_perms.register(flag)
+                group_perms.register(flag)
+            elif user_set == UserSet.others:
+                user_perms.register(flag)
+                group_perms.register(flag)
+                other_perms.register(flag)
+            elif user_set is None or user_set == UserSet.nobody:
+                pass
+
         if permissions.setgid:
-            chmod_args.append("g+s")
+            group_perms.register("s")
         if permissions.setuid:
-            chmod_args.append("u+s")
+            user_perms.register("s")
         if permissions.sticky:
-            chmod_args.append("+t")
-        chmod_args.extend(apply_user_set(permissions.read, "r"))
-        chmod_args.extend(apply_user_set(permissions.write, "w"))
-        if chmod_args:
-            path.chmod(*chmod_args)
+            host_path.chmod("+t")
+
+        register_user_set(permissions.read, "r")
+        register_user_set(permissions.write, "w")
+
+        host_path.chmod(
+            user_perms.get_chmod_arg(),
+            group_perms.get_chmod_arg(),
+            other_perms.get_chmod_arg(),
+        )
+        if permissions.setgid:
+            host_path.setfacl(
+                user_perms.get_setfacl_arg(),
+                group_perms.get_setfacl_arg(),
+                other_perms.get_setfacl_arg(),
+                default=True,
+            )
+
+        user_perms.clear()
+        group_perms.clear()
+        other_perms.clear()
 
         # execute permissions are handled differently for dir and files
         if path.is_dir():
@@ -104,10 +123,44 @@ def update_permissions(host: str) -> None:
                 # With dirs, read should be considered equivalent to execute, and handled
                 # non-recursively. In turn, we ignore the execute setting for dirs because
                 # it becomes redundant.
-                path.chmod(*apply_user_set(permissions.read, "x"), recursive=False)
+                register_user_set(permissions.read, "x")
+
+                host_path.chmod(
+                    user_perms.get_chmod_arg(),
+                    group_perms.get_chmod_arg(),
+                    other_perms.get_chmod_arg(),
+                    recursive=False,
+                )
         elif permissions.execute is not None:
-            path.chmod(*apply_user_set(permissions.execute, "x"))
-        path.chown(permissions.owner, permissions.group)
+            register_user_set(permissions.execute, "x")
+            host_path.chmod(
+                user_perms.get_chmod_arg(),
+                group_perms.get_chmod_arg(),
+                other_perms.get_chmod_arg(),
+            )
+        host_path.chown(permissions.owner, permissions.group)
+
+
+@dataclass
+class PermissionFlagHandler:
+    prefix: str
+    flags: set[str] = field(default_factory=set)
+
+    def register(self, flag: str) -> None:
+        self.flags.add(flag)
+
+    def get_chmod_arg(self) -> str:
+        return self._infer_arg(self.prefix, sep="=")
+
+    def get_setfacl_arg(self) -> str:
+        return self._infer_arg(self.prefix, sep="::")
+
+    def _infer_arg(self, prefix: str, sep: str) -> str:
+        flags = "".join(self.flags) if self.flags else "-"
+        return f"{prefix}{sep}{flags}"
+
+    def clear(self) -> None:
+        self.flags.clear()
 
 
 @dataclass

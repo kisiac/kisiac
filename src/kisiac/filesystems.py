@@ -153,10 +153,19 @@ class PermissionFlagHandler:
         return self._infer_arg(self.prefix, sep="=", nothing_flag="-")
 
     def get_setfacl_arg(self) -> str:
-        return self._infer_arg(self.prefix, sep="::", nothing_flag="--")
+        return self._infer_arg(
+            self.prefix, sep="::", nothing_flag="--", whitelist={"r", "w"}
+        )
 
-    def _infer_arg(self, prefix: str, sep: str, nothing_flag: str) -> str:
-        flags = "".join(self.flags) if self.flags else nothing_flag
+    def _infer_arg(
+        self, prefix: str, sep: str, nothing_flag: str, whitelist: set[str] | None
+    ) -> str:
+        whitelist = set() if whitelist is None else whitelist
+        flags = (
+            "".join(flag for flag in self.flags if flag in whitelist)
+            if self.flags
+            else nothing_flag
+        )
         return f"{prefix}{sep}{flags}"
 
     def clear(self) -> None:

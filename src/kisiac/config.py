@@ -239,10 +239,12 @@ class Files:
                 loader=jinja2.PackageLoader("kisiac", "files"),
                 autoescape=jinja2.select_autoescape(),
             )
+            infrastructure = Config.get_instance().infrastructure
+            infrastructure_name_len = len(infrastructure) if infrastructure else 0
             content = templates.get_template("kisiac.sh.j2").render(
                 packages=Config.get_instance().user_software,
-                infrastructure_name=Config.get_instance().infrastructure,
-                infrastructure_name_len=len(Config.get_instance().infrastructure),
+                infrastructure_name=infrastructure,
+                infrastructure_name_len=infrastructure_name_len,
                 messages=Config.get_instance().messages,
             )
             yield File(target_path=Path("/etc/profile.d/kisiac.sh"), content=content)
@@ -363,7 +365,7 @@ class Config(Singleton):
         return self.get("users", default={})[user].get("vars", {})
 
     @property
-    def infrastructure(self) -> str:
+    def infrastructure(self) -> str | None:
         infrastructure = self.get("infrastructure", default=None)
         check_type("infrastructure key", infrastructure, (str, type(None)))
         return infrastructure

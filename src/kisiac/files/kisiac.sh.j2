@@ -24,9 +24,11 @@ if [ "$relogin" = true ] ; then
     echo "Please relogin to apply changes."
 else
     cat << EOF
+{% if infrastructure_name %}
 ==========={{ head_lines }}
 Welcome to {{ infrastructure_name }}
 ==========={{ head_lines }}
+{% endif %}
 Hints:
 * Use pixi for managing user software
 * Update pixi: pixi self-update

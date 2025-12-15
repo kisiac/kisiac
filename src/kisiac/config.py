@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 import platform
 import re
@@ -56,7 +56,7 @@ class Package:
         return f"pixi global install {channels} {self.name} {supplement}"
 
 
-class FileType(Enum):
+class FileType(StrEnum):
     system = "system"
     user = "user"
 
@@ -117,7 +117,7 @@ class Filesystem:
         )
 
 
-class UserSet(Enum):
+class UserSet(StrEnum):
     nobody = "nobody"
     owner = "owner"
     group = "group"
@@ -468,9 +468,9 @@ class Config(Singleton):
             permissions[path] = Permissions(
                 owner=settings.get("owner"),
                 group=settings.get("group"),
-                read=UserSet(settings["read"]) if "read" in settings else None,
-                write=UserSet(settings["write"]) if "write" in settings else None,
-                execute=UserSet(settings["execute"]) if "execute" in settings else None,
+                read=UserSet[settings["read"]] if "read" in settings else None,
+                write=UserSet[settings["write"]] if "write" in settings else None,
+                execute=UserSet[settings["execute"]] if "execute" in settings else None,
                 setgid=settings.get("setgid", False),
                 setuid=settings.get("setuid", False),
                 sticky=settings.get("sticky", False),

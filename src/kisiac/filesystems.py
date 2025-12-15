@@ -150,13 +150,13 @@ class PermissionFlagHandler:
         self.flags.add(flag)
 
     def get_chmod_arg(self) -> str:
-        return self._infer_arg(self.prefix, sep="=")
+        return self._infer_arg(self.prefix, sep="=", nothing_flag="-")
 
     def get_setfacl_arg(self) -> str:
-        return self._infer_arg(self.prefix, sep="::")
+        return self._infer_arg(self.prefix, sep="::", nothing_flag="--")
 
-    def _infer_arg(self, prefix: str, sep: str) -> str:
-        flags = "".join(self.flags) if self.flags else "-"
+    def _infer_arg(self, prefix: str, sep: str, nothing_flag: str) -> str:
+        flags = "".join(self.flags) if self.flags else nothing_flag
         return f"{prefix}{sep}{flags}"
 
     def clear(self) -> None:

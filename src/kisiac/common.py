@@ -11,7 +11,7 @@ cache = Path("~/.cache/kisiac").expanduser()
 
 
 def is_in_tmux_or_screen() -> bool:
-    term = os.environ["TERM"]
+    term = os.environ.get("TERM", "unknown")
     return term.startswith("tmux") or term.startswith("screen")
 
 

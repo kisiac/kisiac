@@ -11,7 +11,8 @@ users:
 
 user_software:
   - pkg: snakemake
-    with: snakemake-storage-plugin-s3
+    with:
+      - snakemake-storage-plugin-s3
     desc: for running workflows
   - pkg: conda
     desc: only for snakemake internal use, use pixi instead

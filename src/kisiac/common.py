@@ -238,8 +238,8 @@ class HostAgnosticPath:
     def setfacl(self, *mode: str, recursive: bool = True, default: bool = True) -> None:
         self._chperm(
             "setfacl",
-            "-m",
             *(["-d"] if default else []),
+            "-m",
             ",".join(mode),
             recursive=recursive,
         )

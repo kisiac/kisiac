@@ -198,16 +198,34 @@ def update_lvm(host: str) -> None:
     if pvcreate:
         cmds.append(["pvcreate", "--yes", *pvcreate])
     cmds.extend(
-        ["vgcreate", vg.name] + [pv.device for pv in vg.pvs.values()]
+        ["vgcreate", vg.name] + [pv.device for pvs in vg.pvs.values() for pv in pvs]
         for vg_name, vg in desired.vgs.items()
         if vg_name not in current.vgs
     )
+
+    def pvchange(pvs, *args):
+        if pvs:
+            cmds.append(
+                ["pvchange", *args, *pvs]
+            )
 
     vgs_to_update = []
     for vg_desired in desired.vgs.values():
         vg_current = current.vgs.get(vg_desired.name)
         if vg_current is not None:
             vgs_to_update.append((vg_desired, vg_current))
+
+            # update tags
+            for tag, desired_pvs in vg_desired.pvs.items():
+                current_pvs = vg_current.pvs.get(tag, set())
+                if tag is None:
+                    pvchange(desired_pvs - current_pvs, "--deltag", f"@{tag}")
+                else:
+                    pvchange(current_pvs - desired_pvs, "--deltag", f"@{tag}")
+                    pvchange(desired_pvs - current_pvs, "--addtag", f"@{tag}")
+        else:
+            for tag, pvs in vg_desired.pvs.items():
+                pvchange([pv.device for pv in pvs], "--addtag", f"@{tag}")
 
     # update existing VGs
     for vg_desired, vg_current in vgs_to_update:

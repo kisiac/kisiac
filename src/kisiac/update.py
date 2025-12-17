@@ -1,4 +1,5 @@
 import sys
+from typing import Callable
 from kisiac.common import (
     HostAgnosticPath,
     UserError,
@@ -201,27 +202,15 @@ def update_lvm(host: str) -> None:
         for vg_name, vg in desired.vgs.items()
         if vg_name not in current.vgs
     )
-    cmds.extend(
-        [
-            "lvcreate",
-            "-n",
-            lv.name,
-            *lv.size_arg(),
-            vg.name,
-            "--type",
-            ",".join(lv.layout),
-            *lv.stripe_args(),
-        ]
-        for vg in desired.vgs.values()
-        for lv in vg.lvs.values()
-        if vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs
-    )
 
-    # update existing VGs and LVs
+    vgs_to_update = []
     for vg_desired in desired.vgs.values():
         vg_current = current.vgs.get(vg_desired.name)
-        if vg_current is None:
-            continue
+        if vg_current is not None:
+            vgs_to_update.append((vg_desired, vg_current))
+
+    # update existing VGs
+    for vg_desired, vg_current in vgs_to_update:
 
         # update pvs in vg
         pvs_to_add = vg_desired.pvs - vg_current.pvs
@@ -236,11 +225,81 @@ def update_lvm(host: str) -> None:
                 + [pv.device for pv in pvs_to_remove]
             )
 
-        # update lvs in vg
+    def lv_cmd(cmd: Callable, predicate: Callable):
+        cmds.extend(
+            cmd(lv, vg)
+            for vg in desired.vgs.values()
+            for lv in vg.lvs.values()
+            if predicate(lv) and (vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs)
+        )
+
+    def lvcreate(lv, vg):
+        return [
+            "lvcreate",
+            "-n",
+            lv.name,
+            *lv.size_arg(),
+            vg.name,
+            "--type",
+            ",".join(lv.layout),
+            *lv.stripe_args(),
+            *lv.select_arg(),
+        ]
+    # create cache LVs first
+    lv_cmd(lvcreate, lambda lv: lv.is_cache())
+
+    # setup cache
+    lv_cmd(
+        lambda lv, vg: [
+            "lvconvert",
+            "--type",
+            "cache-pool",
+            f"{vg.name}/{lv.name}"
+        ],
+        lambda lv: lv.is_cache()
+    )
+
+    # create other LVs
+    lv_cmd(lvcreate, lambda lv: not lv.is_cache())
+
+    # connect caches with data LVs
+    lv_cmd(
+        lambda lv, vg: [
+            "lvconvert",
+            "--type",
+            "cache",
+            "--cachepool",
+            f"{vg.name}/{lv.name}",
+            "--cachemode",
+            lv.cache_mode,
+            f"{vg.name}/{lv.cache_for.name}",
+        ],
+        lambda lv: lv.is_cache(),
+    )
+
+    # Update existing LVs
+    for vg_desired, vg_current in vgs_to_update:
+
+        lvs_to_update = []
         for lv_desired in vg_desired.lvs.values():
             lv_current = vg_current.lvs.get(lv_desired.name)
-            if lv_current is None:
-                continue
+            if lv_current is not None:
+                lvs_to_update.append((lv_desired, lv_current))
+
+        def get_size_diff(item):
+            lv_desired, lv_current = item
+            if lv_desired.fills_vg():
+                # sort to the end because everything else should be reduced before
+                return sys.maxsize
+            elif lv_current.fills_vg():
+                # sort to the start because we might reduce the size
+                return 0
+            return lv_desired.size - lv_current.size
+
+        # update lvs in vg
+        # sort such that LVs that will be made smaller come first
+        # THis way, we free up space for increasing size for the other LVs
+        for lv_desired, lv_current in sorted(lvs_to_update, key=get_size_diff):
             if not lv_desired.is_same_layout(lv_current):
                 raise UserError(
                     f"Cannot change layout of existing LV {lv_desired.name} "
@@ -279,6 +338,7 @@ def update_lvm(host: str) -> None:
                             f"{vg_desired.name}/{lv_desired.name}",
                         ]
                     )
+
     cmd_msg = cmd_to_str(*cmds)
 
     if cmds and confirm_action(

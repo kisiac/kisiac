@@ -46,10 +46,13 @@ jobs:
       - name: fake block device
         run: |
           # Create a fake block device
-          head -c 104857600 /dev/zero > /tmp/zeroes # 100 MB
+          head -c 104857600 /dev/zero > /tmp/zeroes0 # 100 MB
+          head -c 104857600 /dev/zero > /tmp/zeroes1 # 100 MB
           # Use it as a block device
-          sudo losetup /dev/loop0 /tmp/zeroes
+          sudo losetup /dev/loop0 /tmp/zeroes0
           sudo blockdev --getsize64 /dev/loop0
+          sudo losetup /dev/loop1 /tmp/zeroes1
+          sudo blockdev --getsize64 /dev/loop1
       - name: update-hosts first run
         shell: pixi run bash -e {0}
         run: |

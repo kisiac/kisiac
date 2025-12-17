@@ -65,21 +65,35 @@ encryption:
     key_size: 256
     mapping:
       crypt_loop0: /dev/loop0
+  - hash: sha512
+    cipher: aes-xts-plain64
+    key_size: 256
+    mapping:
+      crypt_loop0: /dev/loop1
 
 lvm:
   pvs:
     - /dev/mapper/crypt_loop0
+    - /dev/mapper/crypt_loop1
   vgs:
     test_vg:
       pvs:
-        - /dev/mapper/crypt_loop0
+        data: /dev/mapper/crypt_loop0
+        cache: /dev/mapper/crypt_loop1
       lvs:
+        cache_lv:
+          size: 20M
+          pv_tag: cache
+          cache_for: test_lv
+          cache_mode: writethrough
         test_lv:
           size: 20M
           layout: linear
+          pv_tag: data
         test-lv2:  # intentionally use hyphen here for testing
           size: rest
           layout: linear
+          pv_tag: data
 
 filesystems:
   - device: /dev/test_vg/test_lv

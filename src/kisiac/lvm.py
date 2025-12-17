@@ -33,7 +33,9 @@ class LV:
 
     def __post_init__(self):
         if self.cache_for is not None and self.cache_mode is None:
-            raise UserError(f"LV {self.name} defined as cache but not cache_mode defined. Define either writethrough or writeback.")
+            raise UserError(
+                f"LV {self.name} defined as cache but not cache_mode defined. Define either writethrough or writeback."
+            )
 
     def is_cache(self) -> bool:
         return self.cache_for is not None
@@ -124,7 +126,9 @@ class LVMSetup:
 
             lvs_entities = {}
             # start with non-cache LVs
-            for lv_name, lv_settings in sorted(lvs.items(), key=lambda entry: "cache_for" in entry[1]):
+            for lv_name, lv_settings in sorted(
+                lvs.items(), key=lambda entry: "cache_for" in entry[1]
+            ):
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
 
                 size = lv_settings["size"]
@@ -207,7 +211,13 @@ class LVMSetup:
 
         pv_data = json.loads(
             run_cmd(
-                ["pvs", "--options", "pv_name,vg_name,lv_name,pv_tags", "--reportformat", "json"],
+                [
+                    "pvs",
+                    "--options",
+                    "pv_name,vg_name,lv_name,pv_tags",
+                    "--reportformat",
+                    "json",
+                ],
                 host=host,
                 sudo=True,
             ).stdout
@@ -264,7 +274,7 @@ class LVMSetup:
                 stripes=entry["stripes"],
                 stripe_size=parse_size(entry["stripe_size"]),
                 cache_for=cache_for,
-                pv_tag=pv_tag_registry.get(lv_name)
+                pv_tag=pv_tag_registry.get(lv_name),
             )
         return entities
 

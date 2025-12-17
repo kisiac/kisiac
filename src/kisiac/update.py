@@ -211,7 +211,6 @@ def update_lvm(host: str) -> None:
 
     # update existing VGs
     for vg_desired, vg_current in vgs_to_update:
-
         # update pvs in vg
         pvs_to_add = vg_desired.pvs - vg_current.pvs
         if pvs_to_add:
@@ -230,7 +229,8 @@ def update_lvm(host: str) -> None:
             cmd(lv, vg)
             for vg in desired.vgs.values()
             for lv in vg.lvs.values()
-            if predicate(lv) and (vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs)
+            if predicate(lv)
+            and (vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs)
         )
 
     def lvcreate(lv, vg):
@@ -245,18 +245,14 @@ def update_lvm(host: str) -> None:
             *lv.stripe_args(),
             *lv.select_arg(),
         ]
+
     # create cache LVs first
     lv_cmd(lvcreate, lambda lv: lv.is_cache())
 
     # setup cache
     lv_cmd(
-        lambda lv, vg: [
-            "lvconvert",
-            "--type",
-            "cache-pool",
-            f"{vg.name}/{lv.name}"
-        ],
-        lambda lv: lv.is_cache()
+        lambda lv, vg: ["lvconvert", "--type", "cache-pool", f"{vg.name}/{lv.name}"],
+        lambda lv: lv.is_cache(),
     )
 
     # create other LVs
@@ -279,7 +275,6 @@ def update_lvm(host: str) -> None:
 
     # Update existing LVs
     for vg_desired, vg_current in vgs_to_update:
-
         lvs_to_update = []
         for lv_desired in vg_desired.lvs.values():
             lv_current = vg_current.lvs.get(lv_desired.name)

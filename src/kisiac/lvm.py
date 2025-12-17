@@ -155,8 +155,8 @@ class LVMSetup:
                 )
 
             pvs = {}
-            for tag, pvs in settings.get("pvs", {}).items():
-                pvs[tag] = {PV(device=Path(pv)) for pv in pvs}
+            for tag, pvs_entry in settings.get("pvs", {}).items():
+                pvs[tag] = {PV(device=Path(pv)) for pv in pvs_entry}
 
             entities.vgs[name] = VG(
                 name=name,

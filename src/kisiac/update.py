@@ -198,7 +198,7 @@ def update_lvm(host: str) -> None:
     if pvcreate:
         cmds.append(["pvcreate", "--yes", *pvcreate])
     cmds.extend(
-        ["vgcreate", vg.name] + [pv.device for pv in vg.pvs]
+        ["vgcreate", vg.name] + [pv.device for pv in vg.pvs.values()]
         for vg_name, vg in desired.vgs.items()
         if vg_name not in current.vgs
     )

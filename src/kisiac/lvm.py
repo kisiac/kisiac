@@ -1,6 +1,5 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from enum import StrEnum
 import json
 from pathlib import Path
 import re
@@ -152,7 +151,7 @@ class LVMSetup:
                     stripe_size=parse_size(lv_settings.get("stripe_size", "0B")),
                     pv_tag=lv_settings.get("pv_tag"),
                     cache_for=cache_for_entry,
-                    _cache_mode=lv_settings.get("cache_mode"),
+                    cache_mode=lv_settings.get("cache_mode"),
                 )
 
             pvs = {}
@@ -285,7 +284,9 @@ def get_missing_pvs(device_reports: Iterable[str]) -> Iterable[PV]:
         assert m is not None, f"Invalid device report: {device_report}"
         info = m.group("info")
         if info == "missing":
-            yield PV(device=m.group("device"))
+            device = m.group("device")
+            assert device is not None
+            yield PV(device=Path(device))
         else:
             try:
                 int(info)

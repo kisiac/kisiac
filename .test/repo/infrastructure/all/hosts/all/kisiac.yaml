@@ -69,7 +69,7 @@ encryption:
     cipher: aes-xts-plain64
     key_size: 256
     mapping:
-      crypt_loop0: /dev/loop1
+      crypt_loop1: /dev/loop1
 
 lvm:
   pvs:

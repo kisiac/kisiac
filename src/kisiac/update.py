@@ -205,9 +205,7 @@ def update_lvm(host: str) -> None:
 
     def pvchange(pvs, *args):
         if pvs:
-            cmds.append(
-                ["pvchange", *args, *pvs]
-            )
+            cmds.append(["pvchange", *args, *pvs])
 
     vgs_to_update = []
     for vg_desired in desired.vgs.values():
@@ -264,17 +262,8 @@ def update_lvm(host: str) -> None:
             *lv.select_arg(),
         ]
 
-    # create cache LVs first
-    lv_cmd(lvcreate, lambda lv: lv.is_cache())
-
-    # setup cache
-    lv_cmd(
-        lambda lv, vg: ["lvconvert", "--type", "cache-pool", f"{vg.name}/{lv.name}"],
-        lambda lv: lv.is_cache(),
-    )
-
-    # create other LVs
-    lv_cmd(lvcreate, lambda lv: not lv.is_cache())
+    # create LVs
+    lv_cmd(lvcreate, lambda lv: True)
 
     # connect caches with data LVs
     lv_cmd(
@@ -282,7 +271,7 @@ def update_lvm(host: str) -> None:
             "lvconvert",
             "--type",
             "cache",
-            "--cachepool",
+            "--cachevol",
             f"{vg.name}/{lv.name}",
             "--cachemode",
             lv.cache_mode,

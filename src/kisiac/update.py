@@ -269,6 +269,7 @@ def update_lvm(host: str) -> None:
     lv_cmd(
         lambda lv, vg: [
             "lvconvert",
+            "--yes",
             "--type",
             "cache",
             "--cachevol",
@@ -335,6 +336,7 @@ def update_lvm(host: str) -> None:
                     cmds.append(
                         [
                             "lvresize",
+                            "--yes",
                             *resize_fs,
                             *lv_desired.size_arg(),
                             f"{vg_desired.name}/{lv_desired.name}",

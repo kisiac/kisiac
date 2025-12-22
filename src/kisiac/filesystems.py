@@ -158,14 +158,14 @@ class PermissionFlagHandler:
         )
 
     def _infer_arg(
-        self, prefix: str, sep: str, nothing_flag: str, whitelist: set[str] | None = None
+        self,
+        prefix: str,
+        sep: str,
+        nothing_flag: str,
+        whitelist: set[str] | None = None,
     ) -> str:
         flags = [flag for flag in self.flags if whitelist is None or flag in whitelist]
-        flags = (
-            "".join(flags)
-            if flags
-            else nothing_flag
-        )
+        flags = "".join(flags) if flags else nothing_flag
         return f"{prefix}{sep}{flags}"
 
     def clear(self) -> None:

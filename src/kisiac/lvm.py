@@ -82,7 +82,7 @@ class LV:
 
     def select_arg(self) -> list[str]:
         if self.pv_tag:
-            return ["--select", f"pv_tags=@{self.pv_tag}"]
+            return [f"@{self.pv_tag}"]
         else:
             return []
 

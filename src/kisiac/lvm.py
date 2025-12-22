@@ -156,6 +156,7 @@ class LVMSetup:
 
             pvs = {}
             for tag, pvs_entry in settings.get("pvs", {}).items():
+                check_type(f"vg {name} pvs entry", pvs_entry, list)
                 pvs[tag] = {PV(device=Path(pv)) for pv in pvs_entry}
 
             entities.vgs[name] = VG(

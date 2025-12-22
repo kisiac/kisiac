@@ -78,8 +78,10 @@ lvm:
   vgs:
     test_vg:
       pvs:
-        data: /dev/mapper/crypt_loop0
-        cache: /dev/mapper/crypt_loop1
+        data:
+          - /dev/mapper/crypt_loop0
+        cache:
+          - /dev/mapper/crypt_loop1
       lvs:
         cache_lv:
           size: 20M

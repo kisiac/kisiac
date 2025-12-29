@@ -186,7 +186,7 @@ class LVMSetup:
                     "--units",
                     "b",
                     "--options",
-                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size,origin",
+                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size,origin,cache_mode",
                     "--reportformat",
                     "json",
                 ],
@@ -269,8 +269,11 @@ class LVMSetup:
             lv_name = entry["lv_name"]
 
             cache_for = entry["origin"]
+            cache_mode = None
             if not cache_for:
                 cache_for = None
+            else:
+                cache_mode = entry["cache_mode"]
 
             vg.lvs[lv_name] = LV(
                 name=lv_name,
@@ -279,6 +282,7 @@ class LVMSetup:
                 stripes=entry["stripes"],
                 stripe_size=parse_size(entry["stripe_size"]),
                 cache_for=cache_for,
+                cache_mode=cache_mode,
                 pv_tag=pv_tag_registry.get(lv_name),
             )
         return entities

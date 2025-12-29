@@ -256,8 +256,7 @@ def update_lvm(host: str) -> None:
             lv.name,
             *lv.size_arg(),
             vg.name,
-            "--type",
-            ",".join(lv.layout),
+            *lv.type_arg(),
             *lv.stripe_args(),
             *lv.select_arg(),
         ]

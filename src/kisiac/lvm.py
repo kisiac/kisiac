@@ -86,6 +86,11 @@ class LV:
         else:
             return []
 
+    def type_arg(self) -> list[str]:
+        if self.layout:
+            return ["--type", ",".join(self.layout)]
+        return []
+
 
 @dataclass(frozen=True)
 class VG:
@@ -136,16 +141,16 @@ class LVMSetup:
                 else:
                     size = parse_size(size, binary=True)
 
-                layout = lv_settings.get("layout")
+                layout = {lv_settings.get("layout")}
 
                 cache_for_entry = lv_settings.get("cache_for")
                 if cache_for_entry is not None:
                     cache_for_entry = lvs_entities[cache_for_entry]
-                    layout = "cache-pool"
+                    layout = set()
 
                 lvs_entities[lv_name] = LV(
                     name=lv_name,
-                    layout={layout},
+                    layout=layout,
                     size=size,
                     stripes=lv_settings.get("stripes", 1),
                     stripe_size=parse_size(lv_settings.get("stripe_size", "0B")),

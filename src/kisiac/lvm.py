@@ -40,6 +40,10 @@ class LV:
         return self.cache_for is not None
 
     def is_same_layout(self, other: Self) -> bool:
+        # TODO find a better way to compare the layout in the cache case
+        if "cache" in other.layout:
+            # current LV is cached, original layout is not reported
+            return True
         return (
             self.layout <= other.layout
             or other.layout <= self.layout

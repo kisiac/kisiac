@@ -227,13 +227,15 @@ def update_lvm(host: str) -> None:
 
     # update existing VGs
     for vg_desired, vg_current in vgs_to_update:
+        pvs_desired = set(vg_desired.pvs.values())
+        pvs_current = set(vg_current.pvs.values())
         # update pvs in vg
-        pvs_to_add = vg_desired.pvs - vg_current.pvs
+        pvs_to_add = pvs_desired - pvs_current
         if pvs_to_add:
             cmds.append(
                 ["vgextend", vg_desired.name] + [pv.device for pv in pvs_to_add]
             )
-        pvs_to_remove = vg_current.pvs - vg_desired.pvs
+        pvs_to_remove = pvs_current - pvs_desired
         if pvs_to_remove:
             cmds.append(
                 ["vgreduce", "--yes", vg_desired.name]

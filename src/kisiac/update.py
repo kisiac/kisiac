@@ -1,3 +1,4 @@
+from itertools import chain
 import sys
 from typing import Callable
 from kisiac.common import (
@@ -227,8 +228,8 @@ def update_lvm(host: str) -> None:
 
     # update existing VGs
     for vg_desired, vg_current in vgs_to_update:
-        pvs_desired = set(vg_desired.pvs.values())
-        pvs_current = set(vg_current.pvs.values())
+        pvs_desired = set(chain.from_iterable(vg_desired.pvs.values()))
+        pvs_current = set(chain.from_iterable(vg_current.pvs.values()))
         # update pvs in vg
         pvs_to_add = pvs_desired - pvs_current
         if pvs_to_add:

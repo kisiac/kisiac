@@ -12,6 +12,15 @@ from kisiac.common import check_type, exists_cmd, run_cmd, UserError
 
 CRYPT_PREFIX = "crypt_"
 VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\((?P<info>.+)\)$")
+LV_INTERNAL_NAME = re.compile(r"^[(?P<name>.+]$")
+
+
+def parse_lv_name(name_entry) -> tuple[str, bool]:
+    m = LV_INTERNAL_NAME.match(name_entry)
+    if m:
+        return m.group("name"), True
+    else:
+        return name_entry, False
 
 
 @dataclass(frozen=True)
@@ -187,6 +196,7 @@ class LVMSetup:
             run_cmd(
                 [
                     "lvs",
+                    "--all",
                     "--units",
                     "b",
                     "--options",
@@ -264,19 +274,20 @@ class LVMSetup:
                     vg_pvs[pv_tag] = set()
                 vg_pvs[pv_tag].add(pv_obj)
 
-            lv_name = entry["lv_name"]
+            lv_name, is_internal = parse_lv_name(entry["lv_name"])
             if lv_name:
                 pv_tag_registry[lv_name] = pv_tags[0]
 
-        for entry in lv_data:
+        for entry in sorted(lv_data, key=lambda entry: entry["origin"]):
             vg = entities.vgs[entry["vg_name"]]
-            lv_name = entry["lv_name"]
+            lv_name, is_internal = parse_lv_name(entry["lv_name"])
 
-            cache_for = entry["origin"]
+            cache_for, _ = parse_lv_name(entry["origin"])
             cache_mode = None
             if not cache_for:
                 cache_for = None
             else:
+                cache_for = vg.lvs[cache_for]
                 cache_mode = entry["cache_mode"]
 
             vg.lvs[lv_name] = LV(

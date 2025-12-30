@@ -200,7 +200,7 @@ class LVMSetup:
                     "--units",
                     "b",
                     "--options",
-                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size,origin,cache_mode",
+                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size,origin,cache_mode,pool_lv",
                     "--reportformat",
                     "json",
                 ],
@@ -279,6 +279,7 @@ class LVMSetup:
                 pv_tag_registry[lv_name] = pv_tags[0]
 
         for entry in sorted(lv_data, key=lambda entry: entry["origin"]):
+            print(entry)
             vg = entities.vgs[entry["vg_name"]]
             lv_name, is_internal = parse_lv_name(entry["lv_name"])
 

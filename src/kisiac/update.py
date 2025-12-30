@@ -243,6 +243,8 @@ def update_lvm(host: str) -> None:
                 + [pv.device for pv in pvs_to_remove]
             )
 
+    print(*(lv for vg in current.vgs.values() for lv in vg.lvs.values()))
+
     def lv_cmd(cmd: Callable, predicate: Callable):
         cmds.extend(
             cmd(lv, vg)

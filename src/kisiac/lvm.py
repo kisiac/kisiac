@@ -12,7 +12,7 @@ from kisiac.common import check_type, exists_cmd, run_cmd, UserError
 
 CRYPT_PREFIX = "crypt_"
 VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\((?P<info>.+)\)$")
-LV_INTERNAL_NAME = re.compile(r"^[(?P<name>.+]$")
+LV_INTERNAL_NAME = re.compile(r"^\[(?P<name>.+)\]$")
 
 
 def parse_lv_name(name_entry) -> tuple[str, bool]:

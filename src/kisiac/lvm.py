@@ -206,7 +206,7 @@ class LVMSetup:
                     stripe_size=parse_size(lv_settings.get("stripe_size", "0B")),
                     pv_tag=lv_settings.get("pv_tag"),
                     cache_pv_tag=lv_settings.get("cache_pv_tag"),
-                    cache_size=lv_settings.get(),
+                    cache_size=lv_settings.get("cache_size"),
                     cache_mode=lv_settings.get("cache_mode"),
                 )
 

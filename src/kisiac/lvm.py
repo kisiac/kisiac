@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import StrEnum
 import json
 from pathlib import Path
 import re
@@ -7,11 +8,20 @@ from typing import Any, Iterable, Self
 
 from humanfriendly import parse_size
 
-from kisiac.common import check_type, exists_cmd, run_cmd
+from kisiac.common import check_type, exists_cmd, run_cmd, UserError
 
 
 CRYPT_PREFIX = "crypt_"
 VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\((?P<info>.+)\)$")
+LV_INTERNAL_NAME = re.compile(r"^\[(?P<name>.+)\]$")
+
+
+def parse_lv_name(name_entry) -> tuple[str, bool]:
+    m = LV_INTERNAL_NAME.match(name_entry)
+    if m:
+        return m.group("name"), True
+    else:
+        return name_entry, False
 
 
 @dataclass(frozen=True)
@@ -19,15 +29,49 @@ class PV:
     device: Path
 
 
-@dataclass(frozen=True)
+class Subvolume(StrEnum):
+    ORIG = "corig"
+    CACHE = "cvol"
+
+
+def _subvolume_name(lv_name: str, subvolume: Subvolume) -> str:
+    return f"{lv_name}_{subvolume}"
+
+
+@dataclass
 class LV:
     name: str
     layout: set[str]
     size: int | None
     stripes: int
     stripe_size: int  # in bytes
+    pv_tag: str | None
+    cache_size: int | None
+    cache_pv_tag: str | None
+    cache_mode: str | None = None
+
+    def __post_init__(self):
+        if self.cache_size is not None and self.cache_mode is None:
+            raise UserError(
+                f"LV {self.name} defines to be cache_size but no cache_mode defined. Define either writethrough or writeback."
+            )
+
+    @property
+    def cache_subvolume_name(self) -> str:
+        return _subvolume_name(self.name, Subvolume.CACHE)
+
+    @property
+    def orig_subvolume_name(self) -> str:
+        return _subvolume_name(self.name, Subvolume.ORIG)
+
+    def is_cached(self) -> bool:
+        return self.cache_mode is not None
 
     def is_same_layout(self, other: Self) -> bool:
+        # TODO find a better way to compare the layout in the cache case
+        if "cache" in other.layout:
+            # current LV is cached, original layout is not reported
+            return True
         return (
             self.layout <= other.layout
             or other.layout <= self.layout
@@ -52,10 +96,17 @@ class LV:
         return self.size is None
 
     def size_arg(self) -> list[str]:
-        if self.size is None:
+        return self._size_arg(Subvolume.ORIG)
+
+    def cache_size_arg(self) -> list[str]:
+        return self._size_arg(Subvolume.CACHE)
+
+    def _size_arg(self, subvolume: Subvolume) -> list[str]:
+        size = self.size if subvolume is Subvolume.ORIG else self.cache_size
+        if size is None:
             return ["--extents", "+100%FREE"]
         else:
-            return ["--size", f"{self.size}B"]
+            return ["--size", f"{size}B"]
 
     def stripe_args(self) -> list[str]:
         if self.stripes > 1:
@@ -68,11 +119,29 @@ class LV:
         else:
             return []
 
+    def select_arg(self) -> list[str]:
+        return self._select_arg(Subvolume.ORIG)
+
+    def cache_select_arg(self) -> list[str]:
+        return self._select_arg(Subvolume.CACHE)
+
+    def _select_arg(self, subvolume: Subvolume) -> list[str]:
+        pv_tag = self.pv_tag if subvolume is Subvolume.ORIG else self.cache_pv_tag
+        if pv_tag:
+            return [f"@{pv_tag}"]
+        else:
+            return []
+
+    def type_arg(self) -> list[str]:
+        if self.layout:
+            return ["--type", ",".join(self.layout)]
+        return []
+
 
 @dataclass(frozen=True)
 class VG:
     name: str
-    pvs: set[PV] = field(default_factory=set)
+    pvs: dict[str | None, set[PV]] = field(default_factory=dict)
     lvs: dict[str, LV] = field(default_factory=dict)
 
     def get_lv_device(self, lv_name: str) -> Path:
@@ -106,26 +175,49 @@ class LVMSetup:
             check_type(f"lvm vg {name} lvs entry", lvs, dict)
 
             lvs_entities = {}
-            for lv_name, lv_settings in lvs.items():
+            # start with non-cache LVs
+            for lv_name, lv_settings in sorted(
+                lvs.items(), key=lambda entry: "cache_for" in entry[1]
+            ):
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
 
-                size = lv_settings["size"]
-                if size == "rest":
-                    size = None
-                else:
-                    size = parse_size(size, binary=True)
+                def handle_size(size_entry):
+                    if size_entry == "rest":
+                        return None
+                    else:
+                        return parse_size(size_entry, binary=True)
+
+                size = handle_size(lv_settings["size"])
+                cache_size = lv_settings.get("cache_size")
+                cache_size=handle_size(cache_size) if cache_size is not None else None
+
+                layout = {lv_settings.get("layout")}
+
+                cache_for_entry = lv_settings.get("cache_for")
+                if cache_for_entry is not None:
+                    cache_for_entry = lvs_entities[cache_for_entry]
+                    layout = set()
 
                 lvs_entities[lv_name] = LV(
                     name=lv_name,
-                    layout={lv_settings["layout"]},
+                    layout=layout,
                     size=size,
                     stripes=lv_settings.get("stripes", 1),
                     stripe_size=parse_size(lv_settings.get("stripe_size", "0B")),
+                    pv_tag=lv_settings.get("pv_tag"),
+                    cache_pv_tag=lv_settings.get("cache_pv_tag"),
+                    cache_size=lv_settings.get("cache_size"),
+                    cache_mode=lv_settings.get("cache_mode"),
                 )
+
+            pvs = {}
+            for tag, pvs_entry in settings.get("pvs", {}).items():
+                check_type(f"vg {name} pvs entry", pvs_entry, list)
+                pvs[tag] = {PV(device=Path(pv)) for pv in pvs_entry}
 
             entities.vgs[name] = VG(
                 name=name,
-                pvs={PV(device=Path(pv)) for pv in settings.get("pvs", [])},
+                pvs=pvs,
                 lvs=lvs_entities,
             )
         return entities
@@ -142,10 +234,11 @@ class LVMSetup:
             run_cmd(
                 [
                     "lvs",
+                    "--all",
                     "--units",
                     "b",
                     "--options",
-                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size",
+                    "lv_name,vg_name,lv_layout,lv_size,stripes,stripe_size,origin,cache_mode,pool_lv",
                     "--reportformat",
                     "json",
                 ],
@@ -175,7 +268,13 @@ class LVMSetup:
 
         pv_data = json.loads(
             run_cmd(
-                ["pvs", "--options", "pv_name,vg_name", "--reportformat", "json"],
+                [
+                    "pvs",
+                    "--options",
+                    "pv_name,vg_name,lv_name,pv_tags",
+                    "--reportformat",
+                    "json",
+                ],
                 host=host,
                 sudo=True,
             ).stdout
@@ -188,25 +287,74 @@ class LVMSetup:
         for vg_name, device_reports in vg_devices.items():
             entities.missing_pvs.update(get_missing_pvs(device_reports))
 
+        pv_tag_registry = {}
         for entry in pv_data:
             pv_device = entry["pv_name"]
+
+            pv_tags = entry["pv_tags"].split(",")
+            if len(pv_tags) > 1:
+                raise UserError(
+                    "Unsupported number of tags associated with "
+                    f"PV {pv_device}: {pv_tags}. Only 1 or 0 allowed."
+                )
+            elif len(pv_tags) == 1:
+                pv_tag = pv_tags[0]
+            else:
+                pv_tag = None
 
             pv_obj = PV(device=Path(pv_device))
             entities.pvs.add(pv_obj)
             vg_name = entry["vg_name"]
             if vg_name and vg_name in entities.vgs:
                 # in case the PV is assigned to a vg
-                entities.vgs[vg_name].pvs.add(pv_obj)
+                vg_pvs = entities.vgs[vg_name].pvs
+                if pv_tag not in vg_pvs:
+                    vg_pvs[pv_tag] = set()
+                vg_pvs[pv_tag].add(pv_obj)
 
-        for entry in lv_data:
-            vg = entities.vgs[entry["vg_name"]]
-            vg.lvs[entry["lv_name"]] = LV(
-                name=entry["lv_name"],
+            lv_name, is_internal = parse_lv_name(entry["lv_name"])
+            if lv_name:
+                pv_tag_registry[lv_name] = pv_tags[0]
+
+        print(pv_tag_registry)
+
+        internal_entries = defaultdict(dict)
+        for entry in sorted(lv_data, key=lambda entry: entry["origin"]):
+            print(entry)
+            vg_name = entry["vg_name"]
+            vg = entities.vgs[vg_name]
+            lv_name, is_internal = parse_lv_name(entry["lv_name"])
+            if is_internal:
+                internal_entries[vg_name][lv_name] = entry
+                continue
+
+            origin, _ = parse_lv_name(entry["origin"])
+            cache_mode = None
+            if not origin:
+                origin = None
+            else:
+                cache_mode = entry["cache_mode"]
+
+            lv_orig_name = _subvolume_name(lv_name, Subvolume.ORIG)
+            lv_cache_name = _subvolume_name(lv_name, Subvolume.CACHE)
+            cache_entry = internal_entries.get(vg_name, {}).get(lv_cache_name, {})
+            cache_size = cache_entry.get("lv_size")
+            if cache_size is not None:
+                cache_size = parse_size(cache_size)
+
+            lv = LV(
+                name=lv_name,
                 layout=set(entry["lv_layout"].split(",")),
                 size=parse_size(entry["lv_size"], binary=True),
                 stripes=entry["stripes"],
                 stripe_size=parse_size(entry["stripe_size"]),
+                pv_tag=pv_tag_registry.get(lv_orig_name),
+                cache_pv_tag=pv_tag_registry.get(lv_cache_name),
+                cache_size=cache_size,
+                cache_mode=cache_mode,
             )
+
+            vg.lvs[lv_name] = lv
         return entities
 
 
@@ -216,7 +364,9 @@ def get_missing_pvs(device_reports: Iterable[str]) -> Iterable[PV]:
         assert m is not None, f"Invalid device report: {device_report}"
         info = m.group("info")
         if info == "missing":
-            yield PV(device=m.group("device"))
+            device = m.group("device")
+            assert device is not None
+            yield PV(device=Path(device))
         else:
             try:
                 int(info)

@@ -1,4 +1,6 @@
+from itertools import chain
 import sys
+from typing import Callable
 from kisiac.common import (
     HostAgnosticPath,
     UserError,
@@ -197,50 +199,115 @@ def update_lvm(host: str) -> None:
     if pvcreate:
         cmds.append(["pvcreate", "--yes", *pvcreate])
     cmds.extend(
-        ["vgcreate", vg.name] + [pv.device for pv in vg.pvs]
+        ["vgcreate", vg.name] + [pv.device for pvs in vg.pvs.values() for pv in pvs]
         for vg_name, vg in desired.vgs.items()
         if vg_name not in current.vgs
     )
-    cmds.extend(
-        [
-            "lvcreate",
-            "-n",
-            lv.name,
-            *lv.size_arg(),
-            vg.name,
-            "--type",
-            ",".join(lv.layout),
-            *lv.stripe_args(),
-        ]
-        for vg in desired.vgs.values()
-        for lv in vg.lvs.values()
-        if vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs
-    )
 
-    # update existing VGs and LVs
+    def pvchange(pvs, *args):
+        if pvs:
+            cmds.append(["pvchange", *args, *pvs])
+
+    vgs_to_update = []
     for vg_desired in desired.vgs.values():
         vg_current = current.vgs.get(vg_desired.name)
-        if vg_current is None:
-            continue
+        if vg_current is not None:
+            vgs_to_update.append((vg_desired, vg_current))
 
+            # update tags
+            for tag, desired_pvs in vg_desired.pvs.items():
+                current_pvs = vg_current.pvs.get(tag, set())
+                if tag is None:
+                    pvchange(desired_pvs - current_pvs, "--deltag", f"@{tag}")
+                else:
+                    pvchange(current_pvs - desired_pvs, "--deltag", f"@{tag}")
+                    pvchange(desired_pvs - current_pvs, "--addtag", f"@{tag}")
+        else:
+            for tag, pvs in vg_desired.pvs.items():
+                pvchange([pv.device for pv in pvs], "--addtag", f"@{tag}")
+
+    # update existing VGs
+    for vg_desired, vg_current in vgs_to_update:
+        pvs_desired = set(chain.from_iterable(vg_desired.pvs.values()))
+        pvs_current = set(chain.from_iterable(vg_current.pvs.values()))
         # update pvs in vg
-        pvs_to_add = vg_desired.pvs - vg_current.pvs
+        pvs_to_add = pvs_desired - pvs_current
         if pvs_to_add:
             cmds.append(
                 ["vgextend", vg_desired.name] + [pv.device for pv in pvs_to_add]
             )
-        pvs_to_remove = vg_current.pvs - vg_desired.pvs
+        pvs_to_remove = pvs_current - pvs_desired
         if pvs_to_remove:
             cmds.append(
                 ["vgreduce", "--yes", vg_desired.name]
                 + [pv.device for pv in pvs_to_remove]
             )
 
-        # update lvs in vg
+    # TODO DBG remove
+    print(*(lv for vg in current.vgs.values() for lv in vg.lvs.values()))
+
+    def lv_cmd(cmd: Callable, predicate: Callable):
+        cmds.extend(
+            cmd(lv, vg)
+            for vg in desired.vgs.values()
+            for lv in vg.lvs.values()
+            if predicate(lv)
+            and (vg.name not in current.vgs or lv.name not in current.vgs[vg.name].lvs)
+        )
+
+    def lvcreate(lv, vg):
+        return [
+            "lvcreate",
+            "-n",
+            lv.name,
+            *lv.size_arg(),
+            vg.name,
+            *lv.type_arg(),
+            *lv.stripe_args(),
+            *lv.select_arg(),
+        ]
+
+    # create LVs
+    lv_cmd(lvcreate, lambda lv: True)
+
+    # handle caches with data LVs
+    lv_cmd(
+        lambda lv, vg: [
+            "lvconvert",
+            "--yes",
+            "--type",
+            "cache",
+            "--cachevol",
+            f"{vg.name}/{lv.cache_name}",
+            "--cachemode",
+            lv.cache_mode,
+            f"{vg.name}/{lv.name}",
+        ],
+        lambda lv: lv.is_cached(),
+    )
+
+    # Update existing LVs
+    for vg_desired, vg_current in vgs_to_update:
+        lvs_to_update = []
         for lv_desired in vg_desired.lvs.values():
             lv_current = vg_current.lvs.get(lv_desired.name)
-            if lv_current is None:
-                continue
+            if lv_current is not None:
+                lvs_to_update.append((lv_desired, lv_current))
+
+        def get_size_diff(item):
+            lv_desired, lv_current = item
+            if lv_desired.fills_vg():
+                # sort to the end because everything else should be reduced before
+                return sys.maxsize
+            elif lv_current.fills_vg():
+                # sort to the start because we might reduce the size
+                return 0
+            return lv_desired.size - lv_current.size
+
+        # update lvs in vg
+        # sort such that LVs that will be made smaller come first
+        # THis way, we free up space for increasing size for the other LVs
+        for lv_desired, lv_current in sorted(lvs_to_update, key=get_size_diff):
             if not lv_desired.is_same_layout(lv_current):
                 raise UserError(
                     f"Cannot change layout of existing LV {lv_desired.name} "
@@ -274,11 +341,13 @@ def update_lvm(host: str) -> None:
                     cmds.append(
                         [
                             "lvresize",
+                            "--yes",
                             *resize_fs,
                             *lv_desired.size_arg(),
                             f"{vg_desired.name}/{lv_desired.name}",
                         ]
                     )
+
     cmd_msg = cmd_to_str(*cmds)
 
     if cmds and confirm_action(

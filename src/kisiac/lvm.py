@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import StrEnum
 import json
 from pathlib import Path
 import re
@@ -28,6 +29,15 @@ class PV:
     device: Path
 
 
+class Subvolume(StrEnum):
+    ORIG = "corig"
+    CACHE = "cvol"
+
+
+def _subvolume_name(lv_name: str, subvolume: Subvolume) -> str:
+    return f"{lv_name}_{subvolume}"
+
+
 @dataclass
 class LV:
     name: str
@@ -36,17 +46,26 @@ class LV:
     stripes: int
     stripe_size: int  # in bytes
     pv_tag: str | None
-    cache_for: Self | None = None
+    cache_size: int | None
+    cache_pv_tag: str | None
     cache_mode: str | None = None
 
     def __post_init__(self):
-        if self.cache_for is not None and self.cache_mode is None:
+        if self.cache_size is not None and self.cache_mode is None:
             raise UserError(
-                f"LV {self.name} defined as cache but not cache_mode defined. Define either writethrough or writeback."
+                f"LV {self.name} defines to be cache_size but no cache_mode defined. Define either writethrough or writeback."
             )
 
-    def is_cache(self) -> bool:
-        return self.cache_for is not None
+    @property
+    def cache_subvolume_name(self) -> str:
+        return _subvolume_name(self.name, Subvolume.CACHE)
+
+    @property
+    def orig_subvolume_name(self) -> str:
+        return _subvolume_name(self.name, Subvolume.ORIG)
+
+    def is_cached(self) -> bool:
+        return self.cache_mode is not None
 
     def is_same_layout(self, other: Self) -> bool:
         # TODO find a better way to compare the layout in the cache case
@@ -77,10 +96,17 @@ class LV:
         return self.size is None
 
     def size_arg(self) -> list[str]:
-        if self.size is None:
+        return self._size_arg(Subvolume.ORIG)
+
+    def cache_size_arg(self) -> list[str]:
+        return self._size_arg(Subvolume.CACHE)
+
+    def _size_arg(self, subvolume: Subvolume) -> list[str]:
+        size = self.size if subvolume is Subvolume.ORIG else self.cache_size
+        if size is None:
             return ["--extents", "+100%FREE"]
         else:
-            return ["--size", f"{self.size}B"]
+            return ["--size", f"{size}B"]
 
     def stripe_args(self) -> list[str]:
         if self.stripes > 1:
@@ -94,8 +120,15 @@ class LV:
             return []
 
     def select_arg(self) -> list[str]:
-        if self.pv_tag:
-            return [f"@{self.pv_tag}"]
+        return self._select_arg(Subvolume.ORIG)
+
+    def cache_select_arg(self) -> list[str]:
+        return self._select_arg(Subvolume.CACHE)
+
+    def _select_arg(self, subvolume: Subvolume) -> list[str]:
+        pv_tag = self.pv_tag if subvolume is Subvolume.ORIG else self.cache_pv_tag
+        if pv_tag:
+            return [f"@{pv_tag}"]
         else:
             return []
 
@@ -148,11 +181,15 @@ class LVMSetup:
             ):
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
 
-                size = lv_settings["size"]
-                if size == "rest":
-                    size = None
-                else:
-                    size = parse_size(size, binary=True)
+                def handle_size(size_entry):
+                    if size_entry == "rest":
+                        return None
+                    else:
+                        return parse_size(size_entry, binary=True)
+
+                size = handle_size(lv_settings["size"])
+                cache_size = lv_settings.get("cache_size")
+                cache_size=handle_size(cache_size) if cache_size is not None else None
 
                 layout = {lv_settings.get("layout")}
 
@@ -168,7 +205,8 @@ class LVMSetup:
                     stripes=lv_settings.get("stripes", 1),
                     stripe_size=parse_size(lv_settings.get("stripe_size", "0B")),
                     pv_tag=lv_settings.get("pv_tag"),
-                    cache_for=cache_for_entry,
+                    cache_pv_tag=lv_settings.get("cache_pv_tag"),
+                    cache_size=lv_settings.get(),
                     cache_mode=lv_settings.get("cache_mode"),
                 )
 
@@ -278,29 +316,45 @@ class LVMSetup:
             if lv_name:
                 pv_tag_registry[lv_name] = pv_tags[0]
 
+        print(pv_tag_registry)
+
+        internal_entries = defaultdict(dict)
         for entry in sorted(lv_data, key=lambda entry: entry["origin"]):
             print(entry)
-            vg = entities.vgs[entry["vg_name"]]
+            vg_name = entry["vg_name"]
+            vg = entities.vgs[vg_name]
             lv_name, is_internal = parse_lv_name(entry["lv_name"])
+            if is_internal:
+                internal_entries[vg_name][lv_name] = entry
+                continue
 
-            cache_for, _ = parse_lv_name(entry["origin"])
+            origin, _ = parse_lv_name(entry["origin"])
             cache_mode = None
-            if not cache_for:
-                cache_for = None
+            if not origin:
+                origin = None
             else:
-                cache_for = vg.lvs[cache_for]
                 cache_mode = entry["cache_mode"]
 
-            vg.lvs[lv_name] = LV(
+            lv_orig_name = _subvolume_name(lv_name, Subvolume.ORIG)
+            lv_cache_name = _subvolume_name(lv_name, Subvolume.CACHE)
+            cache_entry = internal_entries.get(vg_name, {}).get(lv_cache_name, {})
+            cache_size = cache_entry.get("lv_size")
+            if cache_size is not None:
+                cache_size = parse_size(cache_size)
+
+            lv = LV(
                 name=lv_name,
                 layout=set(entry["lv_layout"].split(",")),
                 size=parse_size(entry["lv_size"], binary=True),
                 stripes=entry["stripes"],
                 stripe_size=parse_size(entry["stripe_size"]),
-                cache_for=cache_for,
+                pv_tag=pv_tag_registry.get(lv_orig_name),
+                cache_pv_tag=pv_tag_registry.get(lv_cache_name),
+                cache_size=cache_size,
                 cache_mode=cache_mode,
-                pv_tag=pv_tag_registry.get(lv_name),
             )
+
+            vg.lvs[lv_name] = lv
         return entities
 
 

@@ -83,15 +83,13 @@ lvm:
         cache:
           - /dev/mapper/crypt_loop1
       lvs:
-        cache_lv:
-          size: 20M
-          pv_tag: cache
-          cache_for: test_lv
-          cache_mode: writethrough
         test_lv:
           size: 20M
           layout: linear
           pv_tag: data
+          cache_pv_tag: cache
+          cache_size: 20M
+          cache_mode: writethrough
         test-lv2:  # intentionally use hyphen here for testing
           size: rest
           layout: linear

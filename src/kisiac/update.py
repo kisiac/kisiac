@@ -243,6 +243,7 @@ def update_lvm(host: str) -> None:
                 + [pv.device for pv in pvs_to_remove]
             )
 
+    # TODO DBG remove
     print(*(lv for vg in current.vgs.values() for lv in vg.lvs.values()))
 
     def lv_cmd(cmd: Callable, predicate: Callable):
@@ -269,20 +270,20 @@ def update_lvm(host: str) -> None:
     # create LVs
     lv_cmd(lvcreate, lambda lv: True)
 
-    # connect caches with data LVs
+    # handle caches with data LVs
     lv_cmd(
         lambda lv, vg: [
             "lvconvert",
             "--yes",
             "--type",
             "cache",
-            "--cachevol",
-            f"{vg.name}/{lv.name}",
+            #"--cachevol",
+            #f"{vg.name}/{lv.cache_name}",
             "--cachemode",
             lv.cache_mode,
-            f"{vg.name}/{lv.cache_for.name}",
+            f"{vg.name}/{lv.name}",
         ],
-        lambda lv: lv.is_cache(),
+        lambda lv: lv.is_cached(),
     )
 
     # Update existing LVs

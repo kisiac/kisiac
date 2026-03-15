@@ -50,12 +50,6 @@ class LV:
     cache_pv_tag: str | None
     cache_mode: str | None = None
 
-    def __post_init__(self):
-        if self.cache_size is not None and self.cache_mode is None:
-            raise UserError(
-                f"LV {self.name} defines to be cache_size but no cache_mode defined. Define either writethrough or writeback."
-            )
-
     @property
     def cache_subvolume_name(self) -> str:
         return _subvolume_name(self.name, Subvolume.CACHE)

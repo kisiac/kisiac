@@ -59,7 +59,7 @@ class LV:
         return _subvolume_name(self.name, Subvolume.ORIG)
 
     def is_cached(self) -> bool:
-        return self.cache_mode is not None
+        return self.cache_pv_tag is not None
 
     def is_same_layout(self, other: Self) -> bool:
         # TODO find a better way to compare the layout in the cache case

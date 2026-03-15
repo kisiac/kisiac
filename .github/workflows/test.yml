@@ -22,10 +22,6 @@ jobs:
     env:
       KISIAC_ENCRYPTION_PASSWORD: "dummy"
     steps:
-      # - run: |
-      #     sudo apt-get update
-      #     sudo apt-get upgrade -y
-      - run: lvconvert --version
       - uses: actions/checkout@v4
       - name: setup test data
         run: |

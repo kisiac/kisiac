@@ -89,7 +89,6 @@ lvm:
           pv_tag: data
           cache_pv_tag: cache
           cache_size: 20M
-          cache_mode: writethrough
         test-lv2:  # intentionally use hyphen here for testing
           size: rest
           layout: linear

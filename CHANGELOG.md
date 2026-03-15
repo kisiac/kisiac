@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/kisiac/kisiac/compare/v1.4.1...v1.5.0) (2026-03-15)
+
+
+### Features
+
+* support for LVM caching ([#16](https://github.com/kisiac/kisiac/issues/16)) ([4ae6850](https://github.com/kisiac/kisiac/commit/4ae685063f2d7379eec756d746a38f14e8b85e58))
+
 ## [1.4.1](https://github.com/kisiac/kisiac/compare/v1.4.0...v1.4.1) (2025-12-15)
 
 

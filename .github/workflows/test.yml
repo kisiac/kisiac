@@ -22,6 +22,7 @@ jobs:
     env:
       KISIAC_ENCRYPTION_PASSWORD: "dummy"
     steps:
+      - run: lvconvert --version
       - uses: actions/checkout@v4
       - name: setup test data
         run: |

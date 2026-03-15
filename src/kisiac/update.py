@@ -280,7 +280,7 @@ def update_lvm(host: str) -> None:
             "--type",
             "cache",
             "--cachedevice",
-            lv.cache_pv_tag,
+            f"@{lv.cache_pv_tag}",
             *lv.cache_size_arg(),
             f"{vg.name}/{lv.name}",
         ],

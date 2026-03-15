@@ -113,7 +113,7 @@ def log_msg(*msgs: Any, host: str | None = None) -> None:
     print(" ".join(map(str, ann_msgs)), file=sys.stderr)
 
 
-def cmd_to_str(*cmds: list[str]) -> str:
+def cmd_to_str(*cmds: Sequence[str]) -> str:
     return "\n".join(" ".join(map(str, cmd)) for cmd in cmds)
 
 
@@ -246,14 +246,14 @@ class HostAgnosticPath:
 
     def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
         if recursive and self.is_dir():
-            args = ["-R", *args]
+            args = ("-R", *args)
         self._run_cmd([cmd, *args, str(self.path)])
 
     def is_local_and_user(self) -> bool:
         return self.host == "localhost" and not self.sudo
 
     def _run_cmd(
-        self, cmd: list[str], input: str | None = None, user_error: bool = True
+        self, cmd: Sequence[str], input: str | None = None, user_error: bool = True
     ) -> sp.CompletedProcess[str]:
         return run_cmd(
             cmd,

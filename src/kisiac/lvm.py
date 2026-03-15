@@ -104,9 +104,11 @@ class LV:
     def _size_arg(self, subvolume: Subvolume) -> list[str]:
         size = self.size if subvolume is Subvolume.ORIG else self.cache_size
         if size is None:
+            assert subvolume is Subvolume.ORIG, "Cache resizing not supported"
             return ["--extents", "+100%FREE"]
         else:
-            return ["--size", f"{size}B"]
+            arg = "--cachesize" if subvolume is Subvolume.CACHE else "--size"
+            return [arg, f"{size}B"]
 
     def stripe_args(self) -> list[str]:
         if self.stripes > 1:
@@ -175,10 +177,7 @@ class LVMSetup:
             check_type(f"lvm vg {name} lvs entry", lvs, dict)
 
             lvs_entities = {}
-            # start with non-cache LVs
-            for lv_name, lv_settings in sorted(
-                lvs.items(), key=lambda entry: "cache_for" in entry[1]
-            ):
+            for lv_name, lv_settings in lvs.items():
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
 
                 def handle_size(size_entry):
@@ -189,14 +188,9 @@ class LVMSetup:
 
                 size = handle_size(lv_settings["size"])
                 cache_size = lv_settings.get("cache_size")
-                cache_size=handle_size(cache_size) if cache_size is not None else None
+                cache_size = handle_size(cache_size) if cache_size is not None else None
 
                 layout = {lv_settings.get("layout")}
-
-                cache_for_entry = lv_settings.get("cache_for")
-                if cache_for_entry is not None:
-                    cache_for_entry = lvs_entities[cache_for_entry]
-                    layout = set()
 
                 lvs_entities[lv_name] = LV(
                     name=lv_name,

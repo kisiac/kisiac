@@ -80,19 +80,23 @@ lvm:
       pvs:
         data:
           - /dev/mapper/crypt_loop0
-        cache:
+        fast:
           - /dev/mapper/crypt_loop1
       lvs:
         test_lv:
           size: 20M
           layout: linear
           pv_tag: data
-          cache_pv_tag: cache
+          cache_pv_tag: fast
           cache_size: 20M
         test-lv2:  # intentionally use hyphen here for testing
           size: rest
           layout: linear
           pv_tag: data
+        test_fast:
+          size: rest
+          layout: linear
+          pv_tag: fast
 
 filesystems:
   - device: /dev/test_vg/test_lv

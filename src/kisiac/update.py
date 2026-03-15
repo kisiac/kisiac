@@ -264,8 +264,13 @@ def update_lvm(host: str) -> None:
             *lv.select_arg(),
         ]
 
-    # create LVs
-    lv_cmd(lvcreate, lambda lv: True)
+    # Create LVs and caches.
+    # We first have to handle everything that is cached, in order to ensure that
+    # lvm can reserve sufficient space in the PVs for the caching. Afterwards,
+    # the other LVs can be created.
+
+    # create cached LVs
+    lv_cmd(lvcreate, lambda lv: lv.is_cached())
 
     # handle caches
     lv_cmd(
@@ -275,12 +280,15 @@ def update_lvm(host: str) -> None:
             "--type",
             "cache",
             "--cachedevice",
-            lv.cache_pv_tag,
+            f"@{lv.cache_pv_tag}",
             *lv.cache_size_arg(),
             f"{vg.name}/{lv.name}",
         ],
         lambda lv: lv.is_cached(),
     )
+
+    # create non-cached LVs
+    lv_cmd(lvcreate, lambda lv: not lv.is_cached())
 
     # Update existing LVs
     for vg_desired, vg_current in vgs_to_update:

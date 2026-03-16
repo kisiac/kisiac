@@ -123,6 +123,8 @@ def update_permissions(host: str) -> None:
                 other_perms.get_setfacl_arg(),
                 default=True,
             )
+        else:
+            host_path.setfacl_remove_defaults()
 
         host_path.chown(permissions.owner, permissions.group)
 

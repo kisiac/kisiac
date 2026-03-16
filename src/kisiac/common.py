@@ -246,6 +246,13 @@ class HostAgnosticPath:
             recursive=recursive,
         )
 
+    def setfacl_remove_defaults(self, recursive: bool = True) -> None:
+        self._chperm(
+            "setfacl",
+            "-k",
+            recursive=recursive,
+        )
+
     def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
         if recursive and self.is_dir():
             args = ("-R", *args)

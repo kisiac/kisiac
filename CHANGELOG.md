@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/kisiac/kisiac/compare/v1.5.0...v1.5.1) (2026-03-15)
+
+
+### Miscellaneous Chores
+
+* release 1.5.1 ([76d510f](https://github.com/kisiac/kisiac/commit/76d510fda20c4e05b79fd02ee68d1983784b1780))
+
 ## [1.5.0](https://github.com/kisiac/kisiac/compare/v1.4.1...v1.5.0) (2026-03-15)
 
 

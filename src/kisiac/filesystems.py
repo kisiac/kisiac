@@ -73,6 +73,13 @@ def update_permissions(host: str) -> None:
     for path, permissions in permissions.items():
         host_path = HostAgnosticPath(path, host=host, sudo=True)
 
+        if permissions.setgid:
+            host_path.chmod("g+s")
+        if permissions.setuid:
+            host_path.chmod("u+s")
+        if permissions.sticky:
+            host_path.chmod("+t")
+
         user_perms = PermissionFlagHandler(prefix="u")
         group_perms = PermissionFlagHandler(prefix="g")
         other_perms = PermissionFlagHandler(prefix="o")
@@ -88,23 +95,27 @@ def update_permissions(host: str) -> None:
                 group_perms.register(flag)
                 other_perms.register(flag)
             elif user_set is None or user_set == UserSet.nobody:
-                pass
-
-        if permissions.setgid:
-            group_perms.register("s")
-        if permissions.setuid:
-            user_perms.register("s")
-        if permissions.sticky:
-            host_path.chmod("+t")
+                return
 
         register_user_set(permissions.read, "r")
         register_user_set(permissions.write, "w")
 
-        host_path.chmod(
-            user_perms.get_chmod_arg(),
-            group_perms.get_chmod_arg(),
-            other_perms.get_chmod_arg(),
+        # execute permissions are handled differently for dir and files
+        if path.is_dir():
+            if permissions.read is not None:
+                # With dirs, read should be considered equivalent to execute, and handled
+                # non-recursively. In turn, we ignore the execute setting for dirs because
+                # it becomes redundant.
+                register_user_set(permissions.read, "X")
+        elif permissions.execute is not None:
+            register_user_set(permissions.execute, "x")
+
+        host_path.setfacl(
+            user_perms.get_setfacl_arg(),
+            group_perms.get_setfacl_arg(),
+            other_perms.get_setfacl_arg(),
         )
+
         if permissions.setgid:
             host_path.setfacl(
                 user_perms.get_setfacl_arg(),
@@ -113,31 +124,6 @@ def update_permissions(host: str) -> None:
                 default=True,
             )
 
-        user_perms.clear()
-        group_perms.clear()
-        other_perms.clear()
-
-        # execute permissions are handled differently for dir and files
-        if path.is_dir():
-            if permissions.read is not None:
-                # With dirs, read should be considered equivalent to execute, and handled
-                # non-recursively. In turn, we ignore the execute setting for dirs because
-                # it becomes redundant.
-                register_user_set(permissions.read, "x")
-
-                host_path.chmod(
-                    user_perms.get_chmod_arg(),
-                    group_perms.get_chmod_arg(),
-                    other_perms.get_chmod_arg(),
-                    recursive=False,
-                )
-        elif permissions.execute is not None:
-            register_user_set(permissions.execute, "x")
-            host_path.chmod(
-                user_perms.get_chmod_arg(),
-                group_perms.get_chmod_arg(),
-                other_perms.get_chmod_arg(),
-            )
         host_path.chown(permissions.owner, permissions.group)
 
 
@@ -154,7 +140,7 @@ class PermissionFlagHandler:
 
     def get_setfacl_arg(self) -> str:
         return self._infer_arg(
-            self.prefix, sep="::", nothing_flag="--", whitelist={"r", "w"}
+            self.prefix, sep="::", nothing_flag="--", whitelist={"r", "w", "x", "X"}
         )
 
     def _infer_arg(

@@ -235,7 +235,7 @@ class HostAgnosticPath:
         else:
             raise ValueError("Either user or group must be provided.")
 
-    def setfacl(self, *mode: str, recursive: bool = True, default: bool = True) -> None:
+    def setfacl(self, *mode: str, recursive: bool = True, default: bool = False) -> None:
         self._chperm(
             "setfacl",
             *(["-d"] if default else []),

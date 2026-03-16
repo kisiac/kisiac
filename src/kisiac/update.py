@@ -28,6 +28,7 @@ default_system_software = [
     "xfsprogs",
     "btrfs-progs",
     "smartmontools",
+    "acl",
 ]
 
 

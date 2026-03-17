@@ -17,10 +17,6 @@ class UserSet(StrEnum):
     group = "group"
     others = "others"
 
-    @classmethod
-    def not_nobody(cls) -> Iterable[Self]:
-        return (cls.owner, cls.group, cls.others)
-
 
 def is_in_tmux_or_screen() -> bool:
     term = os.environ.get("TERM", "unknown")

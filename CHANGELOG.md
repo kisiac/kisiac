@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.5.2](https://github.com/kisiac/kisiac/compare/v1.5.1...v1.5.2) (2026-03-17)
+
+
+### Bug Fixes
+
+* add acl as default system software ([2bca64e](https://github.com/kisiac/kisiac/commit/2bca64e3cad5a7fdc88c4942528f8602e2eaaab1))
+* correct permission settings ([f117fff](https://github.com/kisiac/kisiac/commit/f117fffd9312b37a85867c2bee247ac35f839d9b))
+* properly remove ACL defaults if setgid is not set ([4631a12](https://github.com/kisiac/kisiac/commit/4631a12db36cc00eefcdd8b4d4c4a92145e2dbbc))
+
 ## [1.5.1](https://github.com/kisiac/kisiac/compare/v1.5.0...v1.5.1) (2026-03-15)
 
 

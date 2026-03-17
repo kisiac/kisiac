@@ -1,3 +1,4 @@
+from kisiac.common import UserSet
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -115,13 +116,6 @@ class Filesystem:
             _dump=self.dump,
             _fsck=self.fsck,
         )
-
-
-class UserSet(StrEnum):
-    nobody = "nobody"
-    owner = "owner"
-    group = "group"
-    others = "others"
 
 
 @dataclass

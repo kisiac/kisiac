@@ -1,3 +1,4 @@
+from enum import StrEnum
 from pathlib import Path
 import subprocess as sp
 import sys
@@ -8,6 +9,17 @@ import inquirer
 
 
 cache = Path("~/.cache/kisiac").expanduser()
+
+
+class UserSet(StrEnum):
+    nobody = "nobody"
+    owner = "owner"
+    group = "group"
+    others = "others"
+
+    @classmethod
+    def not_nobody(cls) -> Iterable[Self]:
+        return (cls.owner, cls.group, cls.others)
 
 
 def is_in_tmux_or_screen() -> bool:

@@ -175,6 +175,9 @@ class LVMSetup:
                 check_type(f"lvm vg {name} lv {lv_name} entry", lv_settings, dict)
 
                 def handle_size(size_entry):
+                    # TODO: rest is an issue, because it prohibits to create snapshots.
+                    # Maybe print a hint if rest is used, warning or asking whether that
+                    # is intentional?
                     if size_entry == "rest":
                         return None
                     else:

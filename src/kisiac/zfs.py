@@ -146,16 +146,22 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         return provide_password("Provide ZFS dataset encryption passphrase.")
 
     for dataset_name, dataset in desired.datasets.items():
+        options = ["acltype=posixacl", "xattr=sa"]
+        if dataset.mountpoint is not None:
+            options.append(f"mountpoint={dataset.mountpoint}")
+        if dataset.compression is not None:
+            options.append(f"compression={dataset.compression}")
+        if dataset.quota is not None:
+            options.append(f"quota={dataset.quota}")
+        if dataset.reservation is not None:
+            options.append(f"reservation={dataset.reservation}")
+
         if dataset_name not in existing_datasets:
-            create_cmd = ["zfs", "create"]
-            if dataset.mountpoint is not None:
-                create_cmd.extend(["-o", f"mountpoint={dataset.mountpoint}"])
-            if dataset.compression is not None:
-                create_cmd.extend(["-o", f"compression={dataset.compression}"])
-            if dataset.quota is not None:
-                create_cmd.extend(["-o", f"quota={dataset.quota}"])
-            if dataset.reservation is not None:
-                create_cmd.extend(["-o", f"reservation={dataset.reservation}"])
+            create_cmd = [
+                "zfs",
+                "create",
+                *[item for opt in options for item in ["-o", opt]],
+            ]
             if dataset.encryption is not None:
                 create_cmd.extend(
                     [
@@ -179,30 +185,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                 run_cmd(create_cmd + [dataset_name], host=host, sudo=True)
             continue
 
-        if dataset.mountpoint is not None:
-            run_cmd(
-                ["zfs", "set", f"mountpoint={dataset.mountpoint}", dataset_name],
-                host=host,
-                sudo=True,
-            )
-        if dataset.compression is not None:
-            run_cmd(
-                ["zfs", "set", f"compression={dataset.compression}", dataset_name],
-                host=host,
-                sudo=True,
-            )
-        if dataset.quota is not None:
-            run_cmd(
-                ["zfs", "set", f"quota={dataset.quota}", dataset_name],
-                host=host,
-                sudo=True,
-            )
-        if dataset.reservation is not None:
-            run_cmd(
-                ["zfs", "set", f"reservation={dataset.reservation}", dataset_name],
-                host=host,
-                sudo=True,
-            )
+        for option in options:
+            run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
 
         if dataset.encryption is not None:
             actual_encryption = run_cmd(

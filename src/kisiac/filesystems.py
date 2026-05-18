@@ -72,6 +72,7 @@ def update_permissions(host: str) -> None:
     permissions = Config.get_instance().permissions
     for path, permissions in permissions.items():
         host_path = HostAgnosticPath(path, host=host, sudo=True)
+        is_zfs = host_path.get_filesystem_type() == "zfs"
 
         if permissions.setgid:
             host_path.chmod("g+s")
@@ -110,21 +111,41 @@ def update_permissions(host: str) -> None:
         elif permissions.execute is not None:
             register_user_set(permissions.execute, "x")
 
-        host_path.setfacl(
-            user_perms.get_setfacl_arg(),
-            group_perms.get_setfacl_arg(),
-            other_perms.get_setfacl_arg(),
-        )
+        if is_zfs:
+            acl_entries = [
+                user_perms.get_zfs_acl_arg("owner@"),
+                group_perms.get_zfs_acl_arg("group@"),
+                other_perms.get_zfs_acl_arg("everyone@"),
+            ]
 
-        if permissions.setgid:
+            if permissions.setgid:
+                acl_entries.extend(
+                    [
+                        user_perms.get_zfs_acl_arg("owner@", default=True),
+                        group_perms.get_zfs_acl_arg("group@", default=True),
+                        other_perms.get_zfs_acl_arg("everyone@", default=True),
+                    ]
+                )
+
+            acl_entries = [entry for entry in acl_entries if entry is not None]
+
+            host_path.set_zfs_acl(*acl_entries)
+        else:
             host_path.setfacl(
                 user_perms.get_setfacl_arg(),
                 group_perms.get_setfacl_arg(),
                 other_perms.get_setfacl_arg(),
-                default=True,
             )
-        else:
-            host_path.setfacl_remove_defaults()
+
+            if permissions.setgid:
+                host_path.setfacl(
+                    user_perms.get_setfacl_arg(),
+                    group_perms.get_setfacl_arg(),
+                    other_perms.get_setfacl_arg(),
+                    default=True,
+                )
+            else:
+                host_path.setfacl_remove_defaults()
 
         host_path.chown(permissions.owner, permissions.group)
 
@@ -144,6 +165,15 @@ class PermissionFlagHandler:
         return self._infer_arg(
             self.prefix, sep="::", nothing_flag="--", whitelist={"r", "w", "x", "X"}
         )
+
+    def get_zfs_acl_arg(self, principal: str, default: bool = False) -> str | None:
+        perms = self._infer_arg(
+            "", sep="", nothing_flag="", whitelist={"r", "w", "x", "X"}
+        ).replace("X", "x")
+        if not perms:
+            return None
+        inherit = ":fd" if default else ""
+        return f"{principal}:{perms}{inherit}:allow"
 
     def _infer_arg(
         self,

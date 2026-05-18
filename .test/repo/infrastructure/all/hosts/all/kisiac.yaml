@@ -108,6 +108,24 @@ filesystems:
     mount: /mnt/test_lv2
     options: noauto
 
+zfs:
+  - pool: test_pool
+    vdevs:
+      - type: mirror
+        devices:
+          - /dev/loop2
+          - /dev/loop3
+      - type: spare
+        devices:
+          - /dev/loop4
+    datasets:
+      - name: test_dataset
+        mountpoint: /mnt/test_dataset
+        compression: lz4
+        quota: 150M
+        reservation: 10M
+        encryption: aes-256-gcm # keyformat is always passphrase, we will use provide_password to obtain the passphrase
+
 permissions:
   /tmp/test:
     user: jkoester
@@ -121,5 +139,13 @@ permissions:
     user: jkoester
     group: koesterlab
     execute: owner
+    read: owner
+    write: owner
+  /mnt/test_dataset:
+    user: jkoester
+    group: koesterlab
+    setgid: true
+    sticky: true
+    setuid: true
     read: owner
     write: owner

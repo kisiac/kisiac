@@ -25,6 +25,7 @@ from kisiac.common import (
     as_list,
 )
 from kisiac.lvm import LVMSetup
+from kisiac.zfs import ZFSSetup
 
 
 config_file_path = Path("/etc/kisiac.yaml")
@@ -419,6 +420,11 @@ class Config(Singleton):
     def lvm(self) -> LVMSetup:
         lvm = self.get("lvm", default={})
         return LVMSetup.from_config(lvm)
+
+    @property
+    def zfs(self) -> ZFSSetup:
+        zfs = self.get("zfs", default=[])
+        return ZFSSetup.from_config(zfs)
 
     @property
     def filesystems(self) -> list[Filesystem]:

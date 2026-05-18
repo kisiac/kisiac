@@ -261,6 +261,14 @@ class HostAgnosticPath:
             recursive=recursive,
         )
 
+    def set_zfs_acl(self, *entries: str, recursive: bool = True) -> None:
+        self._chperm("chmod", "A-", recursive=recursive)
+        for entry in entries:
+            self._chperm("chmod", f"A+{entry}", recursive=recursive)
+
+    def get_filesystem_type(self) -> str:
+        return self._run_cmd(["stat", "-f", "-c", "%T", str(self.path)]).stdout.strip()
+
     def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
         if recursive and self.is_dir():
             args = ("-R", *args)

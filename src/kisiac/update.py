@@ -18,6 +18,7 @@ from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac import users
 from kisiac.config import Config
 from kisiac.lvm import LVMSetup
+from kisiac.zfs import update_zfs
 
 
 default_system_software = [
@@ -29,6 +30,7 @@ default_system_software = [
     "btrfs-progs",
     "smartmontools",
     "acl",
+    "zfsutils-linux",
 ]
 
 
@@ -62,6 +64,8 @@ def update_host(host: str) -> None:
     update_lvm(host)
 
     update_filesystems(host)
+
+    update_zfs(host=host, desired=config.zfs)
 
     users.setup_users(host=host)
     for user in config.users:

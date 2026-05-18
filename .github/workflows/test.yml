@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      KISIAC_ENCRYPTION_PASSWORD: "dummy"
+      KISIAC_ENCRYPTION_PASSWORD: "dummypassword"
     steps:
       - uses: actions/checkout@v4
       - name: setup test data

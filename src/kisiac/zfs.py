@@ -19,6 +19,7 @@ class ZFSDataset:
     compression: str | None = None
     quota: str | None = None
     reservation: str | None = None
+    atime: str | None = None
     encryption: str | None = None
 
     @property
@@ -155,6 +156,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"quota={dataset.quota}")
         if dataset.reservation is not None:
             options.append(f"reservation={dataset.reservation}")
+        if dataset.atime is not None:
+            options.append(f"atime={dataset.atime}")
 
         if dataset_name not in existing_datasets:
             create_cmd = [

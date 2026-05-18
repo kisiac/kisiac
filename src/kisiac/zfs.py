@@ -143,10 +143,7 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
     password: str | None = None
 
     def get_password() -> str:
-        nonlocal password
-        if password is None:
-            password = provide_password("Provide ZFS dataset encryption passphrase.")
-        return password
+        return provide_password("Provide ZFS dataset encryption passphrase.")
 
     for dataset_name, dataset in desired.datasets.items():
         if dataset_name not in existing_datasets:
@@ -170,12 +167,13 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         "keylocation=prompt",
                     ]
                 )
-                passphrase = get_password()
+                if password is None:
+                    password = get_password()
                 run_cmd(
                     create_cmd + [dataset_name],
                     host=host,
                     sudo=True,
-                    input=f"{passphrase}\n{passphrase}\n",
+                    input=f"{password}\n{password}\n",
                 )
             else:
                 run_cmd(create_cmd + [dataset_name], host=host, sudo=True)

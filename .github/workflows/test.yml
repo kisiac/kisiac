@@ -48,23 +48,13 @@ jobs:
           EOF
       - name: fake block device
         run: |
-          # Create a fake block device
-          head -c 104857600 /dev/zero > /tmp/zeroes0 # 100 MB
-          head -c 209715200 /dev/zero > /tmp/zeroes1 # 200 MB
-          head -c 209715200 /dev/zero > /tmp/zeroes2 # 200 MB
-          head -c 209715200 /dev/zero > /tmp/zeroes3 # 200 MB
-          head -c 209715200 /dev/zero > /tmp/zeroes4 # 200 MB
-          # Use it as a block device
-          sudo losetup /dev/loop0 /tmp/zeroes0
-          sudo blockdev --getsize64 /dev/loop0
-          sudo losetup /dev/loop1 /tmp/zeroes1
-          sudo blockdev --getsize64 /dev/loop1
-          sudo losetup /dev/loop1 /tmp/zeroes2
-          sudo blockdev --getsize64 /dev/loop2
-          sudo losetup /dev/loop1 /tmp/zeroes3
-          sudo blockdev --getsize64 /dev/loop3
-          sudo losetup /dev/loop1 /tmp/zeroes4
-          sudo blockdev --getsize64 /dev/loop4
+          for i in {0..4}; do
+            # Create a fake block device
+            head -c 209715200 /dev/zero > /tmp/zeroes$i # 200 MB
+            # Use it as a block device
+            sudo losetup /dev/loop$i /tmp/zeroes$i
+            sudo blockdev --getsize64 /dev/loop$i
+          done
       - name: update-hosts first run
         shell: pixi run bash -e {0}
         run: |

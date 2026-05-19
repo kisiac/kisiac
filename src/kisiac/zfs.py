@@ -89,6 +89,14 @@ class ZFSSetup:
                 ds_name = dataset.get("name")
                 check_type(f"dataset name of zfs item {i}, dataset {j}", ds_name, str)
 
+                atime_entry = dataset.get("atime")
+                check_type(
+                    f"atime of zfs item {i}, dataset {j}",
+                    atime_entry,
+                    (bool, type(None)),
+                )
+                atime = None if atime_entry is None else "on" if atime_entry else "off"
+
                 ds = ZFSDataset(
                     pool=pool_name,
                     name=ds_name,
@@ -99,7 +107,7 @@ class ZFSSetup:
                     quota=dataset.get("quota"),
                     reservation=dataset.get("reservation"),
                     encryption=dataset.get("encryption"),
-                    atime=dataset.get("atime"),
+                    atime=atime,
                 )
                 setup.datasets[ds.full_name] = ds
 

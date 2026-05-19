@@ -99,6 +99,7 @@ class ZFSSetup:
                     quota=dataset.get("quota"),
                     reservation=dataset.get("reservation"),
                     encryption=dataset.get("encryption"),
+                    atime=dataset.get("atime"),
                 )
                 setup.datasets[ds.full_name] = ds
 

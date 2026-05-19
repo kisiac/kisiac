@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import chain
 import sys
 from typing import Callable
@@ -147,9 +148,7 @@ def update_encryptions(host: str) -> None:
     cmd_msg = cmd_to_str(*(dd_cmds + format_cmds))
 
     password = None
-
-    def get_password() -> str:
-        return provide_password("Provide encryption password.")
+    get_password = partial(provide_password, "Provide encryption password.")
 
     if format_cmds and confirm_action(
         f"The following cryptsetup commands will be executed:\n{cmd_msg}"

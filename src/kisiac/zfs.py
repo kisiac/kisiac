@@ -143,9 +143,6 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
 
     password: str | None = None
 
-    def get_password() -> str:
-        return provide_password("Provide ZFS dataset encryption passphrase.")
-
     for dataset_name, dataset in desired.datasets.items():
         options = ["acltype=posixacl", "xattr=sa"]
         if dataset.mountpoint is not None:
@@ -177,7 +174,9 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                     ]
                 )
                 if password is None:
-                    password = get_password()
+                    password = provide_password(
+                        "Provide ZFS dataset encryption passphrase."
+                    )
                 run_cmd(
                     create_cmd + [dataset_name],
                     host=host,

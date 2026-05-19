@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      KISIAC_ENCRYPTION_PASSWORD: "dummy"
+      KISIAC_ENCRYPTION_PASSWORD: "dummypassword"
     steps:
       - uses: actions/checkout@v4
       - name: setup test data
@@ -48,14 +48,13 @@ jobs:
           EOF
       - name: fake block device
         run: |
-          # Create a fake block device
-          head -c 104857600 /dev/zero > /tmp/zeroes0 # 100 MB
-          head -c 209715200 /dev/zero > /tmp/zeroes1 # 200 MB
-          # Use it as a block device
-          sudo losetup /dev/loop0 /tmp/zeroes0
-          sudo blockdev --getsize64 /dev/loop0
-          sudo losetup /dev/loop1 /tmp/zeroes1
-          sudo blockdev --getsize64 /dev/loop1
+          for i in {0..4}; do
+            # Create a fake block device
+            head -c 209715200 /dev/zero > /tmp/zeroes$i # 200 MB
+            # Use it as a block device
+            sudo losetup /dev/loop$i /tmp/zeroes$i
+            sudo blockdev --getsize64 /dev/loop$i
+          done
       - name: update-hosts first run
         shell: pixi run bash -e {0}
         run: |

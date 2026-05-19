@@ -1,3 +1,4 @@
+from functools import partial
 from itertools import chain
 import sys
 from typing import Callable
@@ -18,6 +19,7 @@ from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac import users
 from kisiac.config import Config
 from kisiac.lvm import LVMSetup
+from kisiac.zfs import update_zfs
 
 
 default_system_software = [
@@ -29,6 +31,7 @@ default_system_software = [
     "btrfs-progs",
     "smartmontools",
     "acl",
+    "zfsutils-linux",
 ]
 
 
@@ -62,6 +65,8 @@ def update_host(host: str) -> None:
     update_lvm(host)
 
     update_filesystems(host)
+
+    update_zfs(host=host, desired=config.zfs)
 
     users.setup_users(host=host)
     for user in config.users:
@@ -143,9 +148,7 @@ def update_encryptions(host: str) -> None:
     cmd_msg = cmd_to_str(*(dd_cmds + format_cmds))
 
     password = None
-
-    def get_password() -> str:
-        return provide_password("Provide encryption password.")
+    get_password = partial(provide_password, "Provide encryption password.")
 
     if format_cmds and confirm_action(
         f"The following cryptsetup commands will be executed:\n{cmd_msg}"

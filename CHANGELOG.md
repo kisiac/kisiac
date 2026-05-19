@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/kisiac/kisiac/compare/v1.5.2...v1.6.0) (2026-05-19)
+
+
+### Features
+
+* zfs support ([#21](https://github.com/kisiac/kisiac/issues/21)) ([0bfd3ba](https://github.com/kisiac/kisiac/commit/0bfd3bad48e9dcd7d3ff452bb56447184dfa74ed))
+
 ## [1.5.2](https://github.com/kisiac/kisiac/compare/v1.5.1...v1.5.2) (2026-03-17)
 
 

@@ -307,11 +307,8 @@ class LVMSetup:
             if lv_name:
                 pv_tag_registry[lv_name] = pv_tags[0]
 
-        print(pv_tag_registry)
-
         internal_entries = defaultdict(dict)
         for entry in sorted(lv_data, key=lambda entry: entry["origin"]):
-            print(entry)
             vg_name = entry["vg_name"]
             vg = entities.vgs[vg_name]
             lv_name, is_internal = parse_lv_name(entry["lv_name"])

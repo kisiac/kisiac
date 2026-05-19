@@ -15,7 +15,7 @@ class ZFSVDev:
 class ZFSDataset:
     pool: str
     name: str
-    mountpoint: Path | None = None
+    mountpoint: Path
     compression: str | None = None
     quota: str | None = None
     reservation: str | None = None
@@ -85,28 +85,35 @@ class ZFSSetup:
             datasets_raw = pool_settings.get("datasets", [])
             check_type(f"datasets of zfs item {i}", datasets_raw, list)
             for j, dataset in enumerate(datasets_raw):
-                check_type(f"dataset {j} of zfs item {i}", dataset, dict)
+                item_msg = f"zfs item {i}, dataset {j}"
+                check_type(f"dataset {item_msg}", dataset, dict)
                 ds_name = dataset.get("name")
-                check_type(f"dataset name of zfs item {i}, dataset {j}", ds_name, str)
+                check_type(f"dataset name of {item_msg}", ds_name, str)
 
                 atime_entry = dataset.get("atime")
                 check_type(
-                    f"atime of zfs item {i}, dataset {j}",
+                    f"atime of {item_msg}",
                     atime_entry,
                     (bool, type(None)),
                 )
                 atime = None if atime_entry is None else "on" if atime_entry else "off"
 
+                mountpoint = dataset["mountpoint"]
+                check_type(f"mountpoint of {item_msg}", mountpoint, str)
+
+                def get_option_value(option_name: str) -> str | None:
+                    value = dataset.get(option_name)
+                    check_type(f"{option_name} of {item_msg}", value, (str, type(None)))
+                    return value
+
                 ds = ZFSDataset(
                     pool=pool_name,
                     name=ds_name,
-                    mountpoint=Path(dataset["mountpoint"])
-                    if "mountpoint" in dataset
-                    else None,
-                    compression=dataset.get("compression"),
-                    quota=dataset.get("quota"),
-                    reservation=dataset.get("reservation"),
-                    encryption=dataset.get("encryption"),
+                    mountpoint=Path(mountpoint),
+                    compression=get_option_value("compression"),
+                    quota=get_option_value("quota"),
+                    reservation=get_option_value("reservation"),
+                    encryption=get_option_value("encryption"),
                     atime=atime,
                 )
                 setup.datasets[ds.full_name] = ds

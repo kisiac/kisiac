@@ -145,15 +145,6 @@ class PermissionFlagHandler:
             self.prefix, sep="::", nothing_flag="--", whitelist={"r", "w", "x", "X"}
         )
 
-    def get_zfs_acl_arg(self, principal: str, default: bool = False) -> str | None:
-        perms = self._infer_arg(
-            "", sep="", nothing_flag="", whitelist={"r", "w", "x", "X"}
-        ).replace("X", "x")
-        if not perms:
-            return None
-        inherit = ":fd" if default else ""
-        return f"{principal}:{perms}{inherit}:allow"
-
     def _infer_arg(
         self,
         prefix: str,

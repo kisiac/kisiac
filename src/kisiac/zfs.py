@@ -21,6 +21,7 @@ class ZFSDataset:
     reservation: str | None = None
     atime: str | None = None
     encryption: str | None = None
+    sync: str | None = None
 
     @property
     def full_name(self) -> str:
@@ -98,6 +99,13 @@ class ZFSSetup:
                 )
                 atime = None if atime_entry is None else "on" if atime_entry else "off"
 
+                sync = dataset.get("sync")
+                check_type(
+                    f"sync of {item_msg}",
+                    sync,
+                    (str, type(None)),
+                )
+
                 mountpoint = dataset["mountpoint"]
                 check_type(f"mountpoint of {item_msg}", mountpoint, str)
 
@@ -115,6 +123,7 @@ class ZFSSetup:
                     reservation=get_option_value("reservation"),
                     encryption=get_option_value("encryption"),
                     atime=atime,
+                    sync=sync,
                 )
                 setup.datasets[ds.full_name] = ds
 
@@ -171,6 +180,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"reservation={dataset.reservation}")
         if dataset.atime is not None:
             options.append(f"atime={dataset.atime}")
+        if dataset.sync is not None:
+            options.append(f"sync={dataset.sync}")
 
         if dataset_name not in existing_datasets:
             create_cmd = [

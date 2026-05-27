@@ -180,6 +180,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"reservation={dataset.reservation}")
         if dataset.atime is not None:
             options.append(f"atime={dataset.atime}")
+        if dataset.sync is not None:
+            options.append(f"sync={dataset.sync}")
 
         if dataset_name not in existing_datasets:
             create_cmd = [

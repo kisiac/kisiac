@@ -202,7 +202,7 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                 *[item for opt in options for item in ["-o", opt]],
             ]
             if dataset.ashift is not None:
-                create_cmd.extend(["-o", f"ashift={dataset.ashift}"])
+                create_cmd.extend(["-d", f"ashift={dataset.ashift}"])
             if dataset.encryption is not None:
                 create_cmd.extend(
                     [

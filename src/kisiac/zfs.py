@@ -1,4 +1,3 @@
-from itertools import chain
 from kisiac.common import confirm_action
 from kisiac.common import cmd_to_str
 from dataclasses import dataclass, field
@@ -25,7 +24,6 @@ class ZFSDataset:
     atime: str | None = None
     encryption: str | None = None
     sync: str | None = None
-    ashift: int | None = None
 
     @property
     def full_name(self) -> str:
@@ -36,9 +34,12 @@ class ZFSDataset:
 class ZFSPool:
     name: str
     vdevs: tuple[ZFSVDev, ...]
+    ashift: int | None = None
 
     def get_create_cmd(self) -> list[str]:
         cmd = ["zpool", "create", "-f", self.name]
+        if self.ashift is not None:
+            cmd.extend(["-o", f"ashift={self.ashift}"])
         spares = []
         for vdev in self.vdevs:
             if vdev.vdev_type == "spare":
@@ -87,7 +88,12 @@ class ZFSSetup:
                     )
                 )
 
-            setup.pools[pool_name] = ZFSPool(name=pool_name, vdevs=tuple(vdevs))
+            ashift = pool_settings.get("ashift")
+            check_type(f"ashift of zfs item {i}", ashift, (int, type(None)))
+
+            setup.pools[pool_name] = ZFSPool(
+                name=pool_name, vdevs=tuple(vdevs), ashift=ashift
+            )
 
             datasets_raw = pool_settings.get("datasets", [])
             check_type(f"datasets of zfs item {i}", datasets_raw, list)
@@ -133,7 +139,6 @@ class ZFSSetup:
                     encryption=get_option_value("encryption"),
                     atime=atime,
                     sync=sync,
-                    ashift=ashift,
                 )
                 setup.datasets[ds.full_name] = ds
 
@@ -162,9 +167,12 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         if line.strip()
     )
 
+    cmds = []
+    encryption_cmds = []
+
     for pool_name, pool in desired.pools.items():
         if pool_name not in existing_pools:
-            run_cmd(pool.get_create_cmd(), host=host, sudo=True)
+            cmds.append(pool.get_create_cmd())
 
     existing_datasets = set(
         line.strip()
@@ -175,11 +183,6 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         ).stdout.splitlines()
         if line.strip()
     )
-
-    password: str | None = None
-
-    cmds = []
-    encryption_cmds = []
 
     for dataset_name, dataset in desired.datasets.items():
         options = ["acltype=posixacl", "xattr=sa"]
@@ -197,14 +200,11 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"sync={dataset.sync}")
 
         if dataset_name not in existing_datasets:
-            envvars = {}
             create_cmd = [
                 "zfs",
                 "create",
                 *[item for opt in options for item in ["-o", opt]],
             ]
-            if dataset.ashift is not None:
-                envvars["ZFS_POOL_CREATE_ASHIFT"] = str(dataset.ashift)
             if dataset.encryption is not None:
                 create_cmd.extend(
                     [
@@ -216,9 +216,9 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         "keylocation=prompt",
                     ]
                 )
-                encryption_cmds.append((envvars, create_cmd + [dataset_name]))
+                encryption_cmds.append(create_cmd + [dataset_name])
             else:
-                cmds.append((envvars, create_cmd + [dataset_name]))
+                cmds.append(create_cmd + [dataset_name])
         else:
             for option in options:
                 run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
@@ -246,41 +246,27 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         "Only passphrase is currently supported."
                     )
 
-            if dataset.ashift is not None:
-                actual_ashift = run_cmd(
-                    ["zfs", "get", "-H", "-o", "value", "ashift", dataset_name],
-                    host=host,
-                    sudo=True,
-                ).stdout.strip()
-                if actual_ashift != str(dataset.ashift):
-                    raise UserError(
-                        f"Cannot modify ashift of existing dataset {dataset_name}. "
-                        f"Current: {actual_ashift}, desired: {dataset.ashift}"
-                    )
-
-    cmd_msg = cmd_to_str([cmd[1] for cmd in chain(cmds, encryption_cmds)])
+    cmd_msg = cmd_to_str(*cmds, *encryption_cmds)
 
     if (cmds or encryption_cmds) and confirm_action(
         f"The following ZFS commands will be executed:\n{cmd_msg}\n"
         "\nProceed? If answering no, consider making the changes manually or "
         "adjust the kisiac ZFS configuration."
     ):
-        for envvars, cmd in cmds:
+        for cmd in cmds:
             run_cmd(
                 cmd,
                 host=host,
                 sudo=True,
                 user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
-                env=envvars,
             )
         if encryption_cmds:
             password = provide_password("Provide ZFS dataset encryption passphrase.")
-            for envvars, cmd in encryption_cmds:
+            for cmd in encryption_cmds:
                 run_cmd(
                     cmd,
                     host=host,
                     sudo=True,
                     input=f"{password}\n{password}\n",
                     user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
-                    env=envvars,
                 )

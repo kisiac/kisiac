@@ -1,3 +1,4 @@
+from itertools import chain
 from kisiac.common import confirm_action
 from kisiac.common import cmd_to_str
 from dataclasses import dataclass, field
@@ -196,13 +197,14 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"sync={dataset.sync}")
 
         if dataset_name not in existing_datasets:
+            envvars = {}
             create_cmd = [
                 "zfs",
                 "create",
                 *[item for opt in options for item in ["-o", opt]],
             ]
             if dataset.ashift is not None:
-                create_cmd.extend(["-d", f"ashift={dataset.ashift}"])
+                envvars["ZFS_POOL_CREATE_ASHIFT"] = str(dataset.ashift)
             if dataset.encryption is not None:
                 create_cmd.extend(
                     [
@@ -214,9 +216,9 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         "keylocation=prompt",
                     ]
                 )
-                encryption_cmds.append(create_cmd + [dataset_name])
+                encryption_cmds.append((envvars, create_cmd + [dataset_name]))
             else:
-                cmds.append(create_cmd + [dataset_name])
+                cmds.append((envvars, create_cmd + [dataset_name]))
         else:
             for option in options:
                 run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
@@ -256,27 +258,29 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         f"Current: {actual_ashift}, desired: {dataset.ashift}"
                     )
 
-    cmd_msg = cmd_to_str(*cmds, *encryption_cmds)
+    cmd_msg = cmd_to_str([cmd[1] for cmd in chain(cmds, encryption_cmds)])
 
     if (cmds or encryption_cmds) and confirm_action(
         f"The following ZFS commands will be executed:\n{cmd_msg}\n"
         "\nProceed? If answering no, consider making the changes manually or "
         "adjust the kisiac ZFS configuration."
     ):
-        for cmd in cmds:
+        for envvars, cmd in cmds:
             run_cmd(
                 cmd,
                 host=host,
                 sudo=True,
                 user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
+                env=envvars,
             )
         if encryption_cmds:
             password = provide_password("Provide ZFS dataset encryption passphrase.")
-            for cmd in encryption_cmds:
+            for envvars, cmd in encryption_cmds:
                 run_cmd(
                     cmd,
                     host=host,
                     sudo=True,
                     input=f"{password}\n{password}\n",
                     user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
+                    env=envvars,
                 )

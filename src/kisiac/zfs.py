@@ -53,6 +53,8 @@ class ZFSSetup:
     pools: dict[str, ZFSPool] = field(default_factory=dict)
     datasets: dict[str, ZFSDataset] = field(default_factory=dict)
 
+    # TODO add from_system method to read existing setup and only apply necessary changes
+    # also support incremental expansion
     @classmethod
     def from_config(cls, config: list[dict[str, Any]]) -> "ZFSSetup":
         check_type("zfs key", config, list)

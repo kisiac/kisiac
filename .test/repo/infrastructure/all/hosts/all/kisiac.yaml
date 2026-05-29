@@ -111,13 +111,16 @@ filesystems:
 zfs:
   - pool: test_pool
     vdevs:
-      - type: mirror
+      - type: raidz2
         devices:
           - /dev/loop2
           - /dev/loop3
+          - /dev/loop4
+          - /dev/loop5
+          - /dev/loop6
       - type: spare
         devices:
-          - /dev/loop4
+          - /dev/loop7
     datasets:
       - name: test_dataset
         mountpoint: /mnt/test_dataset

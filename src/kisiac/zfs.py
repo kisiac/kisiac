@@ -1,3 +1,5 @@
+from kisiac.common import confirm_action
+from kisiac.common import cmd_to_str
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -168,6 +170,9 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
 
     password: str | None = None
 
+    cmds = []
+    encryption_cmds = []
+
     for dataset_name, dataset in desired.datasets.items():
         options = ["acltype=posixacl", "xattr=sa"]
         if dataset.mountpoint is not None:
@@ -200,42 +205,57 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                         "keylocation=prompt",
                     ]
                 )
-                if password is None:
-                    password = provide_password(
-                        "Provide ZFS dataset encryption passphrase."
+                encryption_cmds.append(create_cmd + [dataset_name])
+            else:
+                cmds.append(create_cmd + [dataset_name])
+        else:
+            for option in options:
+                run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
+
+            if dataset.encryption is not None:
+                actual_encryption = run_cmd(
+                    ["zfs", "get", "-H", "-o", "value", "encryption", dataset_name],
+                    host=host,
+                    sudo=True,
+                ).stdout.strip()
+                if actual_encryption != dataset.encryption:
+                    raise UserError(
+                        f"Cannot modify encryption of existing dataset {dataset_name}. "
+                        f"Current: {actual_encryption}, desired: {dataset.encryption}"
                     )
+
+                keyformat = run_cmd(
+                    ["zfs", "get", "-H", "-o", "value", "keyformat", dataset_name],
+                    host=host,
+                    sudo=True,
+                ).stdout.strip()
+                if keyformat != "passphrase":
+                    raise UserError(
+                        f"Dataset {dataset_name} is encrypted but keyformat is {keyformat}. "
+                        "Only passphrase is currently supported."
+                    )
+
+    cmd_msg = cmd_to_str(*cmds, *encryption_cmds)
+
+    if (cmds or encryption_cmds) and confirm_action(
+        f"The following ZFS commands will be executed:\n{cmd_msg}\n"
+        "\nProceed? If answering no, consider making the changes manually or "
+        "adjust the kisiac ZFS configuration."
+    ):
+        for cmd in cmds:
+            run_cmd(
+                cmd,
+                host=host,
+                sudo=True,
+                user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
+            )
+        if encryption_cmds:
+            password = provide_password("Provide ZFS dataset encryption passphrase.")
+            for cmd in encryption_cmds:
                 run_cmd(
-                    create_cmd + [dataset_name],
+                    cmd,
                     host=host,
                     sudo=True,
                     input=f"{password}\n{password}\n",
-                )
-            else:
-                run_cmd(create_cmd + [dataset_name], host=host, sudo=True)
-            continue
-
-        for option in options:
-            run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
-
-        if dataset.encryption is not None:
-            actual_encryption = run_cmd(
-                ["zfs", "get", "-H", "-o", "value", "encryption", dataset_name],
-                host=host,
-                sudo=True,
-            ).stdout.strip()
-            if actual_encryption != dataset.encryption:
-                raise UserError(
-                    f"Cannot modify encryption of existing dataset {dataset_name}. "
-                    f"Current: {actual_encryption}, desired: {dataset.encryption}"
-                )
-
-            keyformat = run_cmd(
-                ["zfs", "get", "-H", "-o", "value", "keyformat", dataset_name],
-                host=host,
-                sudo=True,
-            ).stdout.strip()
-            if keyformat != "passphrase":
-                raise UserError(
-                    f"Dataset {dataset_name} is encrypted but keyformat is {keyformat}. "
-                    "Only passphrase is currently supported."
+                    user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
                 )

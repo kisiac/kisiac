@@ -126,6 +126,7 @@ zfs:
         reservation: 10M
         encryption: aes-256-gcm # keyformat is always passphrase, we will use provide_password to obtain the passphrase
         atime: off
+        ashift: 12
 
 permissions:
   /tmp/test:

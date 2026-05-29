@@ -24,6 +24,7 @@ class ZFSDataset:
     atime: str | None = None
     encryption: str | None = None
     sync: str | None = None
+    ashift: int | None = None
 
     @property
     def full_name(self) -> str:
@@ -113,6 +114,9 @@ class ZFSSetup:
                 mountpoint = dataset["mountpoint"]
                 check_type(f"mountpoint of {item_msg}", mountpoint, str)
 
+                ashift = dataset.get("ashift")
+                check_type(f"ashift of {item_msg}", ashift, (int, type(None)))
+
                 def get_option_value(option_name: str) -> str | None:
                     value = dataset.get(option_name)
                     check_type(f"{option_name} of {item_msg}", value, (str, type(None)))
@@ -128,6 +132,7 @@ class ZFSSetup:
                     encryption=get_option_value("encryption"),
                     atime=atime,
                     sync=sync,
+                    ashift=ashift,
                 )
                 setup.datasets[ds.full_name] = ds
 
@@ -196,6 +201,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                 "create",
                 *[item for opt in options for item in ["-o", opt]],
             ]
+            if dataset.ashift is not None:
+                create_cmd.extend(["-o", f"ashift={dataset.ashift}"])
             if dataset.encryption is not None:
                 create_cmd.extend(
                     [
@@ -235,6 +242,18 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                     raise UserError(
                         f"Dataset {dataset_name} is encrypted but keyformat is {keyformat}. "
                         "Only passphrase is currently supported."
+                    )
+
+            if dataset.ashift is not None:
+                actual_ashift = run_cmd(
+                    ["zfs", "get", "-H", "-o", "value", "ashift", dataset_name],
+                    host=host,
+                    sudo=True,
+                ).stdout.strip()
+                if actual_ashift != str(dataset.ashift):
+                    raise UserError(
+                        f"Cannot modify ashift of existing dataset {dataset_name}. "
+                        f"Current: {actual_ashift}, desired: {dataset.ashift}"
                     )
 
     cmd_msg = cmd_to_str(*cmds, *encryption_cmds)

@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/kisiac/kisiac/compare/v1.6.0...v1.7.0) (2026-05-29)
+
+
+### Features
+
+* support sync property for datasets ([#23](https://github.com/kisiac/kisiac/issues/23)) ([61a5e46](https://github.com/kisiac/kisiac/commit/61a5e4674d59755cd6c2a5b9393b6284e3b9ee9b))
+
+
+### Bug Fixes
+
+* confirm zfs actions ([#25](https://github.com/kisiac/kisiac/issues/25)) ([0f91cd1](https://github.com/kisiac/kisiac/commit/0f91cd17d28ca9e1bfa35dc3e7b7565b5645ebdc))
+
 ## [1.6.0](https://github.com/kisiac/kisiac/compare/v1.5.2...v1.6.0) (2026-05-19)
 
 

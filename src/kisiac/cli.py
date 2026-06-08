@@ -5,8 +5,10 @@ from kisiac.common import UserError, log_msg
 from kisiac.runtime_settings import (
     CheckHostSettings,
     GlobalSettings,
+    TestConfigSettings,
     UpdateHostSettings,
 )
+from kisiac.test_config import test_config
 from kisiac.update import setup_config, update_host
 
 
@@ -34,6 +36,17 @@ def get_argument_parser() -> ArgumentParser:
     )
     CheckHostSettings.register_cli_args(check_hosts)
 
+    test_config_parser = subparsers.add_parser(
+        "test-config",
+        help="Test a kisiac config repo in a container",
+        description=(
+            "Test a kisiac config repo as if deployed on a real machine, "
+            "using a configurable container runtime (docker, podman, apptainer, udocker)."
+        ),
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+    TestConfigSettings.register_cli_args(test_config_parser)
+
     return parser
 
 
@@ -53,6 +66,9 @@ def main() -> None:
                 CheckHostSettings.from_cli_args(args)
                 for host in CheckHostSettings.get_instance().hosts:
                     check_host(host)
+            case "test-config":
+                TestConfigSettings.from_cli_args(args)
+                test_config()
             case _:
                 parser.print_help()
     except UserError as e:

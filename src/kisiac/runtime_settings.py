@@ -112,9 +112,9 @@ class TestConfigSettings(SettingsBase):
         },
     )
     image: str = field(
-        default="ubuntu:24.04",
+        default="ghcr.io/prefix-dev/pixi:latest",
         metadata={
-            "help": "Container image for testing (must be Debian/Ubuntu-based)"
+            "help": "Container image for testing (defaults to the pixi Docker image)"
         },
     )
     hostname: str = field(

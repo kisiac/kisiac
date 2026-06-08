@@ -32,9 +32,10 @@ def _build_init_script(config_yaml: str, upgrade: bool) -> str:
     config_b64 = base64.b64encode(config_yaml.encode()).decode()
     lines = [
         "set -e",
-        "apt-get update -q",
-        "apt-get install -y -q python3 python3-pip git",
-        "pip3 install --quiet kisiac",
+        # Install kisiac into a pixi-managed global environment.
+        "pixi global install kisiac",
+        # Make the globally installed kisiac binary available on PATH.
+        'export PATH="$HOME/.pixi/bin:$PATH"',
         # The config is base64-encoded to avoid shell quoting issues.
         f"printf '%s' '{config_b64}' | base64 -d > /etc/kisiac.yaml",
         f"kisiac --non-interactive update-hosts {skip_arg} localhost",

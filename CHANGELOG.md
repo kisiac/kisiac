@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/kisiac/kisiac/compare/v1.7.0...v1.8.0) (2026-06-08)
+
+
+### Features
+
+* ashift support ([#26](https://github.com/kisiac/kisiac/issues/26)) ([80bbda0](https://github.com/kisiac/kisiac/commit/80bbda09e48e0529905093d8a8a5e92fe0b5210f))
+
 ## [1.7.0](https://github.com/kisiac/kisiac/compare/v1.6.0...v1.7.0) (2026-05-29)
 
 

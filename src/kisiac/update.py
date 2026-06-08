@@ -96,6 +96,8 @@ def update_system_packages(host: str) -> None:
 
 
 def update_encryptions(host: str) -> None:
+    # TODO: remove existing luks devices if they are no longer in the config
+    # (after confirming with the user)
     desired = Config.get_instance().encryption
     current = EncryptionSetup.from_system(host=host, desired=desired)
 

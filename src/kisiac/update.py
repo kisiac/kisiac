@@ -220,6 +220,9 @@ def update_lvm(host: str) -> None:
 
             # update tags
             for tag, desired_pvs in vg_desired.pvs.items():
+                if tag == "untagged":
+                    # support for untagged PVs
+                    continue
                 current_pvs = vg_current.pvs.get(tag, set())
                 if tag is None:
                     pvchange(desired_pvs - current_pvs, "--deltag", f"@{tag}")

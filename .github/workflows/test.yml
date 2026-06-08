@@ -48,7 +48,7 @@ jobs:
           EOF
       - name: fake block device
         run: |
-          for i in {0..4}; do
+          for i in {0..7}; do
             # Create a fake block device
             head -c 209715200 /dev/zero > /tmp/zeroes$i # 200 MB
             # Use it as a block device
@@ -59,6 +59,7 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           kisiac --non-interactive update-hosts --skip-system-upgrade localhost
+      - run: sudo zdb -C test_pool
       - name: update-hosts second run
         shell: pixi run bash -e {0}
         run: |

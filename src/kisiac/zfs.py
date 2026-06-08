@@ -34,9 +34,12 @@ class ZFSDataset:
 class ZFSPool:
     name: str
     vdevs: tuple[ZFSVDev, ...]
+    ashift: int | None = None
 
     def get_create_cmd(self) -> list[str]:
         cmd = ["zpool", "create", "-f", self.name]
+        if self.ashift is not None:
+            cmd.extend(["-o", f"ashift={self.ashift}"])
         spares = []
         for vdev in self.vdevs:
             if vdev.vdev_type == "spare":
@@ -85,7 +88,12 @@ class ZFSSetup:
                     )
                 )
 
-            setup.pools[pool_name] = ZFSPool(name=pool_name, vdevs=tuple(vdevs))
+            ashift = pool_settings.get("ashift")
+            check_type(f"ashift of zfs item {i}", ashift, (int, type(None)))
+
+            setup.pools[pool_name] = ZFSPool(
+                name=pool_name, vdevs=tuple(vdevs), ashift=ashift
+            )
 
             datasets_raw = pool_settings.get("datasets", [])
             check_type(f"datasets of zfs item {i}", datasets_raw, list)
@@ -112,6 +120,9 @@ class ZFSSetup:
 
                 mountpoint = dataset["mountpoint"]
                 check_type(f"mountpoint of {item_msg}", mountpoint, str)
+
+                ashift = dataset.get("ashift")
+                check_type(f"ashift of {item_msg}", ashift, (int, type(None)))
 
                 def get_option_value(option_name: str) -> str | None:
                     value = dataset.get(option_name)
@@ -156,9 +167,12 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         if line.strip()
     )
 
+    cmds = []
+    encryption_cmds = []
+
     for pool_name, pool in desired.pools.items():
         if pool_name not in existing_pools:
-            run_cmd(pool.get_create_cmd(), host=host, sudo=True)
+            cmds.append(pool.get_create_cmd())
 
     existing_datasets = set(
         line.strip()
@@ -169,11 +183,6 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         ).stdout.splitlines()
         if line.strip()
     )
-
-    password: str | None = None
-
-    cmds = []
-    encryption_cmds = []
 
     for dataset_name, dataset in desired.datasets.items():
         options = ["acltype=posixacl", "xattr=sa"]

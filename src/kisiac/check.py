@@ -25,8 +25,8 @@ def parse_zpool_status(output: str) -> dict[str, str | None]:
                 break
         else:
             if field in ("status", "action"):
-                assert fields[field] is not None
-                fields[field] = f"{fields[field]} {line}"
+                current = fields[field] or ""
+                fields[field] = f"{current} {line}".strip()
     return fields
 
 
@@ -64,7 +64,7 @@ def check_zfs_health(host: str) -> None:
             action_items.append(action)
 
         scan = info["scan"]
-        if scan and ("resilver" in scan.lower() or "in progress" in scan.lower()):
+        if scan and any(keyword in scan.lower() for keyword in ("resilver", "scrub")):
             action_items.append(scan)
 
         if action_items:

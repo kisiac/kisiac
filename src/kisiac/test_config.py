@@ -35,6 +35,7 @@ def _build_init_script(config_yaml: str, upgrade: bool) -> str:
         "apt-get update -q",
         "apt-get install -y -q python3 python3-pip git",
         "pip3 install --quiet kisiac",
+        # The config is base64-encoded to avoid shell quoting issues.
         f"printf '%s' '{config_b64}' | base64 -d > /etc/kisiac.yaml",
         f"kisiac --non-interactive update-hosts {skip_arg} localhost",
         f"kisiac --non-interactive update-hosts {skip_arg} localhost",
@@ -52,6 +53,8 @@ def _build_container_cmd(
     inner_cmd = f"printf '%s' '{script_b64}' | base64 -d | bash"
     match runtime:
         case "docker" | "podman":
+            # --privileged is required so that the container can simulate a full
+            # system deployment (e.g. apt-get, systemctl daemon-reload).
             cmd = [runtime, "run", "--rm", "--privileged", "-h", hostname]
             if local_repo is not None:
                 cmd += ["-v", f"{local_repo}:{_CONTAINER_REPO_PATH}:ro"]
@@ -92,6 +95,8 @@ def test_config() -> None:
         )
 
     hostname = settings.hostname or platform.node()
+    # Container hostnames must be at most 63 characters; use just the short name.
+    hostname = hostname.split(".")[0][:63]
 
     # Determine whether the repo is a local path or a remote URL.
     repo_path = Path(settings.repo)

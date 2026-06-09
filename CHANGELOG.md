@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.9.0](https://github.com/kisiac/kisiac/compare/v1.8.0...v1.9.0) (2026-06-09)
+
+
+### Features
+
+* support for untagged pvs ([#28](https://github.com/kisiac/kisiac/issues/28)) ([aa81ff0](https://github.com/kisiac/kisiac/commit/aa81ff03a476914158bbca27164b600713434a53))
+
+
+### Bug Fixes
+
+* avoid re-mounting of existing zfs datasets ([#33](https://github.com/kisiac/kisiac/issues/33)) ([a2d02aa](https://github.com/kisiac/kisiac/commit/a2d02aa1a15eaa29277193f469e7419a123aa3eb))
+* mount unmounted zfs datasets and handle encryption key input ([#34](https://github.com/kisiac/kisiac/issues/34)) ([76faa54](https://github.com/kisiac/kisiac/commit/76faa544c14ae5344065949e99ce3281c8d1b3dd))
+
 ## [1.8.0](https://github.com/kisiac/kisiac/compare/v1.7.0...v1.8.0) (2026-06-08)
 
 

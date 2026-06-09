@@ -248,6 +248,15 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
 
     cmd_msg = cmd_to_str(*cmds, *encryption_cmds)
 
+    password = None
+
+    def get_password():
+        nonlocal password
+        if password is not None:
+            return password
+        password = provide_password("Provide ZFS dataset encryption passphrase.")
+        return password
+
     if (cmds or encryption_cmds) and confirm_action(
         f"The following ZFS commands will be executed:\n{cmd_msg}\n"
         "\nProceed? If answering no, consider making the changes manually or "
@@ -261,12 +270,37 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                 user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
             )
         if encryption_cmds:
-            password = provide_password("Provide ZFS dataset encryption passphrase.")
             for cmd in encryption_cmds:
                 run_cmd(
                     cmd,
                     host=host,
                     sudo=True,
-                    input=f"{password}\n{password}\n",
+                    input=f"{get_password()}\n{get_password()}\n",
                     user_error_msg="Incomplete ZFS update due to error (make sure to manually fix this!)",
                 )
+
+    # mount datasets that are not yet mounted
+    for dataset_name, dataset in desired.datasets.items():
+        if dataset.mountpoint is not None:
+            # check if dataset is already mounted
+            is_mounted = run_cmd(
+                ["zfs", "get", "-H", "-o", "value", "mounted", dataset_name],
+                host=host,
+                sudo=True,
+            ).stdout.strip()
+            if is_mounted == "yes":
+                continue
+            # if encrypted dataset, get password and open it first
+            if dataset.encryption is not None:
+                run_cmd(
+                    ["zfs", "load-key", dataset_name],
+                    host=host,
+                    sudo=True,
+                    input=f"{get_password()}\n",
+                    user_error_msg=f"Failed to load key for encrypted dataset {dataset_name}.",
+                )
+            run_cmd(
+                ["zfs", "mount", dataset_name],
+                host=host,
+                sudo=True,
+            )

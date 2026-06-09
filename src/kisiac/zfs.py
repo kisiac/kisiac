@@ -221,7 +221,14 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
                 cmds.append(create_cmd + [dataset_name])
         else:
             for option in options:
-                run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
+                option_name, desired_value = option.split("=", 1)
+                actual_value = run_cmd(
+                    ["zfs", "get", "-H", "-o", "value", option_name, dataset_name],
+                    host=host,
+                    sudo=True,
+                ).stdout.strip()
+                if actual_value != desired_value:
+                    run_cmd(["zfs", "set", option, dataset_name], host=host, sudo=True)
 
             if dataset.encryption is not None:
                 actual_encryption = run_cmd(

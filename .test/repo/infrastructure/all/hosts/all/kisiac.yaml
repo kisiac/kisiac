@@ -1,11 +1,11 @@
 users:
-  jkoester:
+  testuser:
     ssh_pub_key: ssh-rsa AAAdummy
-    primary_group: koesterlab
+    primary_group: testgroup
     groups:
-      primary: koesterlab
+      primary: testgroup
       secondary:
-        - researchers
+        - secondtestgroup
     vars:
       something: foo
 

@@ -64,6 +64,12 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           kisiac --non-interactive update-hosts --skip-system-upgrade localhost
+      - name: Show profile
+        run: |
+          cat /etc/profile.d/kisiac.sh
+      - name: Simulate user login
+        run: |
+          sudo -u jkoester bash -l
       - name: check permissions
         shell: pixi run bash -e {0}
         run: |

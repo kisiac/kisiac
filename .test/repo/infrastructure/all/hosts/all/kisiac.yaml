@@ -133,22 +133,22 @@ zfs:
 
 permissions:
   /tmp/test:
-    user: jkoester
-    group: koesterlab
+    user: testuser
+    group: testgroup
     setgid: true
     sticky: true
     setuid: true
     read: owner
     write: owner
   /tmp/test/exec:
-    user: jkoester
-    group: koesterlab
+    user: testuser
+    group: testgroup
     execute: owner
     read: owner
     write: owner
   /mnt/test_dataset:
-    user: jkoester
-    group: koesterlab
+    user: testuser
+    group: testgroup
     setgid: true
     sticky: true
     setuid: true

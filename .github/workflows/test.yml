@@ -69,7 +69,10 @@ jobs:
           cat /etc/profile.d/kisiac.sh
       - name: Simulate user login
         run: |
-          sudo -u jkoester bash -l
+          sudo -u jkoester bash -l -c "echo test"
+      - name: Show bashrc
+        run: |
+          cat /home/jkoester/.bashrc
       - name: check permissions
         shell: pixi run bash -e {0}
         run: |

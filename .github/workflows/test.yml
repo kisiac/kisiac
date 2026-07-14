@@ -69,7 +69,7 @@ jobs:
           cat /etc/profile.d/kisiac.sh
       - name: Simulate user login
         run: |
-          sudo -H -i -u testuser echo test
+          sudo -H -u testuser PIXI_NO_CONFIG=1 bash -l -c 'echo test'
       - name: Show bashrc
         run: |
           cat /home/testuser/.bashrc

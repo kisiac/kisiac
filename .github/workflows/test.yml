@@ -69,7 +69,7 @@ jobs:
           cat /etc/profile.d/kisiac.sh
       - name: Simulate user login
         run: |
-          sudo -u testuser bash -c 'export HOME=/home/testuser; unset SUDO_USER; echo $HOME; source /etc/profile.d/kisiac.sh'
+          sudo -u testuser bash -c 'export HOME=/home/testuser; unset SUDO_USER; echo $HOME; pixi() { command pixi --no-config "$@"; }; export -f pixi; source /etc/profile.d/kisiac.sh'
       - name: Show bashrc
         run: |
           cat /home/testuser/.bashrc

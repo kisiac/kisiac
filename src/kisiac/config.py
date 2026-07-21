@@ -142,7 +142,7 @@ class File:
             if target_path.read_text() == self.content:
                 return []
             if not overwrite_existing:
-                target_path = target_path.with_suffix(f"{target_path.suffix}.updated")
+                target_path = target_path.with_suffix(f"{self.target_path.suffix}.updated")
         created = []
         for ancestor in target_path.parents[::-1][1:]:
             if not ancestor.exists():

@@ -1,3 +1,4 @@
+from typing import ClassVar
 from copy import copy
 from dataclasses import dataclass, field
 import json
@@ -133,6 +134,7 @@ def update_permissions(host: str) -> None:
 class PermissionFlagHandler:
     prefix: str
     flags: set[str] = field(default_factory=set)
+    flag_order: ClassVar[str] = "rwxXsS"
 
     def register(self, flag: str) -> None:
         self.flags.add(flag)
@@ -152,7 +154,10 @@ class PermissionFlagHandler:
         nothing_flag: str,
         whitelist: set[str] | None = None,
     ) -> str:
-        flags = [flag for flag in self.flags if whitelist is None or flag in whitelist]
+        flags = sorted(
+            [flag for flag in self.flags if whitelist is None or flag in whitelist],
+            key=self.flag_order.index,
+        )
         flags = "".join(flags) if flags else nothing_flag
         return f"{prefix}{sep}{flags}"
 

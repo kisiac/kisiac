@@ -75,11 +75,11 @@ def update_permissions(host: str) -> None:
         host_path = HostAgnosticPath(path, host=host, sudo=True)
 
         if permissions.setgid:
-            host_path.chmod("g+s")
+            host_path.chmod("g+s", only_dirs=True)
         if permissions.setuid:
-            host_path.chmod("u+s")
+            host_path.chmod("u+s", only_dirs=True)
         if permissions.sticky:
-            host_path.chmod("+t")
+            host_path.chmod("+t", only_dirs=True)
 
         user_perms = PermissionFlagHandler(prefix="u")
         group_perms = PermissionFlagHandler(prefix="g")

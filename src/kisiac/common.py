@@ -231,8 +231,10 @@ class HostAgnosticPath:
         else:
             self._run_cmd(["mkdir", "-p", str(self.path)])
 
-    def chmod(self, *mode: str, recursive: bool = True) -> None:
-        self._chperm("chmod", ",".join(mode), recursive=recursive)
+    def chmod(
+        self, *mode: str, recursive: bool = True, only_dirs: bool = False
+    ) -> None:
+        self._chperm("chmod", ",".join(mode), recursive=recursive, only_dirs=only_dirs)
 
     def chown(self, user: str | None, group: str | None = None) -> None:
         if user is not None:
@@ -261,9 +263,27 @@ class HostAgnosticPath:
             recursive=recursive,
         )
 
-    def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
+    def _chperm(
+        self, cmd: str, *args: str, recursive: bool = True, only_dirs: bool = False
+    ) -> None:
         if recursive and self.is_dir():
-            args = ("-R", *args)
+            if only_dirs:
+                self._run_cmd(
+                    [
+                        "find",
+                        str(self.path),
+                        "-type",
+                        "d",
+                        "-exec",
+                        cmd,
+                        *args,
+                        "{}",
+                        "+",
+                    ]
+                )
+                return
+            else:
+                args = ("-R", *args)
         self._run_cmd([cmd, *args, str(self.path)])
 
     def is_local_and_user(self) -> bool:

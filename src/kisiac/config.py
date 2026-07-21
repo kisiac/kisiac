@@ -13,6 +13,7 @@ import yaml
 import git
 from pyfstab.entry import Entry as FstabEntry
 import yte
+from deepmerge import always_merger
 
 from kisiac.common import (
     HostAgnosticPath,
@@ -218,7 +219,7 @@ class Files:
             config_path = base / "kisiac.yaml"
             if self._is_provided(config_path):
                 with open(config_path, "r") as f:
-                    config.update(load_config(f))
+                    always_merger.merge(config, load_config(f))
         return config
 
     def get_files(self, user: str | None) -> Iterable[File]:

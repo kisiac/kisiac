@@ -75,9 +75,9 @@ def update_permissions(host: str) -> None:
         host_path = HostAgnosticPath(path, host=host, sudo=True)
 
         if permissions.setgid:
-            host_path.chmod("g+S")
+            host_path.chmod("g+s")
         if permissions.setuid:
-            host_path.chmod("u+S")
+            host_path.chmod("u+s")
         if permissions.sticky:
             host_path.chmod("+t")
 

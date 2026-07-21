@@ -84,6 +84,7 @@ def update_permissions(host: str) -> None:
         user_perms = PermissionFlagHandler(prefix="u")
         group_perms = PermissionFlagHandler(prefix="g")
         other_perms = PermissionFlagHandler(prefix="o")
+        mask_perms = PermissionFlagHandler(prefix="m")
 
         def register_user_set(user_set: UserSet | None, flag: str) -> None:
             if user_set == UserSet.owner:
@@ -91,10 +92,12 @@ def update_permissions(host: str) -> None:
             elif user_set == UserSet.group:
                 user_perms.register(flag)
                 group_perms.register(flag)
+                mask_perms.register(flag)
             elif user_set == UserSet.others:
                 user_perms.register(flag)
                 group_perms.register(flag)
                 other_perms.register(flag)
+                mask_perms.register(flag)
             elif user_set is None or user_set == UserSet.nobody:
                 return
 
@@ -115,6 +118,7 @@ def update_permissions(host: str) -> None:
             user_perms.get_setfacl_arg(),
             group_perms.get_setfacl_arg(),
             other_perms.get_setfacl_arg(),
+            mask_perms.get_setfacl_arg(),
         )
 
         if permissions.setgid:
@@ -122,6 +126,7 @@ def update_permissions(host: str) -> None:
                 user_perms.get_setfacl_arg(),
                 group_perms.get_setfacl_arg(),
                 other_perms.get_setfacl_arg(),
+                mask_perms.get_setfacl_arg(),
                 default=True,
             )
         else:

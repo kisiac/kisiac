@@ -225,9 +225,11 @@ class Files:
         if user is not None:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
+            prefix = Path("/home") / user
         else:
             file_type = "system_files"
             vars = self.vars
+            prefix = Path("/")
 
             # yield built-in system files
             templates = jinja2.Environment(
@@ -264,7 +266,7 @@ class Files:
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
-                    yield File(Path("/") / (base / f).relative_to(collection), content)
+                    yield File(prefix / (base / f).relative_to(collection), content)
 
 
 @dataclass

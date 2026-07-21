@@ -15,7 +15,7 @@ setup_cmd() {
 setup_cmd pixi "curl -fsSL https://pixi.sh/install.sh | sh"
 
 {% for pkg in packages %}
-setup_cmd "{{ pkg.cmd }}" "{{ pkg.install_cmd }}"
+setup_cmd $'{{ pkg.cmd | replace("'", "\'") }}' $'{{ pkg.install_cmd | replace("'", "\'") }}'
 {% endfor %}
 
 {% set head_lines = "=" * infrastructure_name_len %}

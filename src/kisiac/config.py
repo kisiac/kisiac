@@ -225,7 +225,7 @@ class Files:
         if user is not None:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
-            prefix = Path("/home") / user
+            prefix = Path(f"~{user}")
         else:
             file_type = "system_files"
             vars = self.vars

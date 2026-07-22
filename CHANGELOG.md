@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.0.0](https://github.com/kisiac/kisiac/compare/v1.9.0...v2.0.0) (2026-07-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* perform deep merge of config files at different levels
+
+### Features
+
+* support setting zfs recordsize ([70e3dab](https://github.com/kisiac/kisiac/commit/70e3dab05a864d2ebc458dfaf2a7ca233a037a53))
+
+
+### Bug Fixes
+
+* apply setgid, sticky, and setuid only on dirs ([5f5feff](https://github.com/kisiac/kisiac/commit/5f5feffefedef6ad2f207ca7218c06265f1b7e51))
+* ensure ACL flags are given in the right order ([0a4ac09](https://github.com/kisiac/kisiac/commit/0a4ac09358bf87347abb3149fb82b184df4882c8))
+* escape quotes in commands ([#38](https://github.com/kisiac/kisiac/issues/38)) ([1cc227e](https://github.com/kisiac/kisiac/commit/1cc227e1f355ee9cc1316efe77d50ae635ec8627))
+* fix quote escapting in profile template ([0bbbf88](https://github.com/kisiac/kisiac/commit/0bbbf88356d7d52282aeeb4206cf878878cc3494))
+* let user dir be expanded automatically ([c30f611](https://github.com/kisiac/kisiac/commit/c30f611e0cba456f340ea1d0a38be8c5a6c761b0))
+* perform deep merge of config files at different levels ([49b6ec3](https://github.com/kisiac/kisiac/commit/49b6ec3226e2b44add2c5457e43c50cd7f513503))
+* set ACL mask if required ([c081079](https://github.com/kisiac/kisiac/commit/c0810794e3967186b759b0a505a3ee90c5d9f6ea))
+* setgit and setuid only on dirs (S) ([c47c7af](https://github.com/kisiac/kisiac/commit/c47c7affd2c5c23301fafcdaa6b194d374d9483f))
+* use proper path for user files ([#36](https://github.com/kisiac/kisiac/issues/36)) ([56ac8c9](https://github.com/kisiac/kisiac/commit/56ac8c98cc7e0330a4b7d80f492d937618bf7053))
+* whitespace handling in bash messages ([0fe5746](https://github.com/kisiac/kisiac/commit/0fe5746670cc3a689587708f165b69ff8b9664e9))
+
 ## [1.9.0](https://github.com/kisiac/kisiac/compare/v1.8.0...v1.9.0) (2026-06-09)
 
 

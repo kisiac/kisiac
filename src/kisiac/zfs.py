@@ -24,6 +24,7 @@ class ZFSDataset:
     atime: str | None = None
     encryption: str | None = None
     sync: str | None = None
+    recordsize: str | None = None
 
     @property
     def full_name(self) -> str:
@@ -139,6 +140,7 @@ class ZFSSetup:
                     encryption=get_option_value("encryption"),
                     atime=atime,
                     sync=sync,
+                    recordsize=get_option_value("recordsize"),
                 )
                 setup.datasets[ds.full_name] = ds
 
@@ -198,6 +200,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"atime={dataset.atime}")
         if dataset.sync is not None:
             options.append(f"sync={dataset.sync}")
+        if dataset.recordsize is not None:
+            options.append(f"recordsize={dataset.recordsize}")
 
         if dataset_name not in existing_datasets:
             create_cmd = [

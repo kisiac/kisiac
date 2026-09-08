@@ -5,6 +5,75 @@ from kisiac.filesystems import DeviceInfos
 from kisiac.lvm import LVMSetup
 
 
+def parse_zpool_status(output: str) -> dict[str, str | None]:
+    fields = {
+        "state": None,
+        "status": None,
+        "action": None,
+        "scan": None,
+    }
+    field = None
+    lines = output.splitlines()
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        for name in fields:
+            if line.startswith(f"{name}:"):
+                fields[name] = line.removeprefix(f"{name}:").strip()
+                field = name
+                break
+        else:
+            if field in ("status", "action"):
+                current = fields[field] or ""
+                fields[field] = f"{current} {line}".strip()
+    return fields
+
+
+def check_zfs_health(host: str) -> None:
+    if not exists_cmd("zpool", host, sudo=True):
+        return
+
+    pools = sorted(
+        line.strip()
+        for line in run_cmd(
+            ["zpool", "list", "-H", "-o", "name"], host=host, sudo=True
+        ).stdout.splitlines()
+        if line.strip()
+    )
+
+    for pool in pools:
+        res = run_cmd(
+            ["zpool", "status", pool],
+            host=host,
+            sudo=True,
+            check=False,
+        )
+        if res.returncode != 0:
+            err = (res.stderr or res.stdout).strip()
+            log_msg(f"Unable to retrieve ZFS pool status for {pool}: {err}", host=host)
+            continue
+        info = parse_zpool_status(res.stdout)
+
+        state = info["state"] or "UNKNOWN"
+        log_msg(f"ZFS pool {pool} health: {state}", host=host)
+
+        action_items = []
+        action = info["action"]
+        if action and action.lower() != "none requested":
+            action_items.append(action)
+
+        scan = info["scan"]
+        if scan and any(keyword in scan.lower() for keyword in ("resilver", "scrub")):
+            action_items.append(scan)
+
+        if action_items:
+            log_msg(
+                f"ZFS pool {pool} action items: {'; '.join(action_items)}",
+                host=host,
+            )
+
+
 def check_host(host: str) -> None:
     if not exists_cmd("smartctl", host, sudo=True):
         raise UserError("smartctl not found, install smartmontools")
@@ -23,6 +92,7 @@ def check_host(host: str) -> None:
                     "--json",
                     device_info.device,
                 ],
+                host=host,
                 sudo=True,
                 check=False,
             )
@@ -50,3 +120,5 @@ def check_host(host: str) -> None:
     missing_pvs = "\n".join(sorted(str(pv.device) for pv in lvm.missing_pvs))
     if missing_pvs:
         log_msg(f"Missing PVs (disk failures?): {missing_pvs}", host=host)
+
+    check_zfs_health(host)

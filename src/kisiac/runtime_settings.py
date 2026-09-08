@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field, fields
 from argparse import ArgumentParser, Namespace
+from dataclasses import dataclass, field, fields
 from typing import Self, get_args, get_origin
 
 from kisiac.common import Singleton
@@ -23,9 +23,9 @@ class SettingsBase(Singleton):
             elif cls_field.default is not None:
                 default = cls_field.default
 
-            kwargs = dict(
-                help=cls_field.metadata["help"],
-            )
+            kwargs = {
+                "help": cls_field.metadata["help"],
+            }
             if cls_field.metadata.get("required", False) and not positional:
                 kwargs["required"] = True
 

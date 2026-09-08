@@ -1,7 +1,9 @@
+import sys
+from collections.abc import Callable
 from functools import partial
 from itertools import chain
-import sys
-from typing import Callable
+
+from kisiac import users
 from kisiac.common import (
     HostAgnosticPath,
     UserError,
@@ -13,14 +15,12 @@ from kisiac.common import (
     provide_password,
     run_cmd,
 )
+from kisiac.config import Config
 from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
-from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
-from kisiac import users
-from kisiac.config import Config
 from kisiac.lvm import LVMSetup
+from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac.zfs import update_zfs
-
 
 default_system_software = [
     "openssh-server",
@@ -105,14 +105,13 @@ def update_encryptions(host: str) -> None:
     for encryption in desired:
         if encryption.name is not None:
             curr_encryption = current_by_name.get(encryption.name)
-            if curr_encryption is not None:
-                if curr_encryption != encryption:
-                    # TODO support such changes
-                    raise UserError(
-                        f"Encryption {encryption.name} has changed. "
-                        "Modifying it via kisiac is not yet supported. "
-                        f"Current: {curr_encryption}, Desired: {encryption}"
-                    )
+            if curr_encryption is not None and curr_encryption != encryption:
+                # TODO support such changes
+                raise UserError(
+                    f"Encryption {encryption.name} has changed. "
+                    "Modifying it via kisiac is not yet supported. "
+                    f"Current: {curr_encryption}, Desired: {encryption}"
+                )
 
     dd_cmds = []
     format_cmds = []

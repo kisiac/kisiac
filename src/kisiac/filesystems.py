@@ -1,15 +1,16 @@
-from typing import ClassVar
-from copy import copy
-from dataclasses import dataclass, field
 import json
-from pathlib import Path
 import re
 import subprocess as sp
-from typing import Any, Iterator, Self
-from kisiac.common import HostAgnosticPath, UserError, confirm_action, run_cmd
-from kisiac.config import Config, Filesystem, UserSet
+from collections.abc import Iterator
+from copy import copy
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, ClassVar, Self
 
 from pyfstab import Fstab
+
+from kisiac.common import HostAgnosticPath, UserError, confirm_action, run_cmd
+from kisiac.config import Config, Filesystem, UserSet
 
 blkid_attrs_re = re.compile(r'(?P<attr>[A-Z]+)="(?P<value>\S+)"')
 
@@ -70,8 +71,8 @@ def update_filesystems(host: str) -> None:
 
 
 def update_permissions(host: str) -> None:
-    permissions = Config.get_instance().permissions
-    for path, permissions in permissions.items():
+    path_permissions = Config.get_instance().permissions
+    for path, permissions in path_permissions.items():
         host_path = HostAgnosticPath(path, host=host, sudo=True)
 
         if permissions.setgid:
@@ -86,7 +87,14 @@ def update_permissions(host: str) -> None:
         other_perms = PermissionFlagHandler(prefix="o")
         mask_perms = PermissionFlagHandler(prefix="m")
 
-        def register_user_set(user_set: UserSet | None, flag: str) -> None:
+        def register_user_set(
+            user_set: UserSet | None,
+            flag: str,
+            mask_perms=mask_perms,
+            user_perms=user_perms,
+            group_perms=group_perms,
+            other_perms=other_perms,
+        ) -> None:
             if user_set == UserSet.owner:
                 user_perms.register(flag)
             elif user_set == UserSet.group:

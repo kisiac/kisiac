@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/kisiac/kisiac/compare/v2.0.0...v2.1.0) (2026-09-08)
+
+
+### Features
+
+* add ZFS health and action-item reporting to monitoring ([#31](https://github.com/kisiac/kisiac/issues/31)) ([45330c8](https://github.com/kisiac/kisiac/commit/45330c8771c7981a455f5d0bc0b08c025947a1d2))
+
 ## [2.0.0](https://github.com/kisiac/kisiac/compare/v1.9.0...v2.0.0) (2026-07-22)
 
 

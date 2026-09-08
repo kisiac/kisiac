@@ -23,7 +23,7 @@ kisiac = { path = ".", editable = true }
 format = "ruff format src"
 lint = "ruff check src"
 typecheck = "pyrefly check src"
-test = "pytest tests/test_all.py -v"
+test = "pytest -v"
 build = { cmd = "python -m build", description = "Build the package into the dist/ directory" }
 check-build = { cmd = "python -m twine check dist/*", depends-on = [
   "build",

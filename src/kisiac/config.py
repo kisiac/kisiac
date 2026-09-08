@@ -1,33 +1,33 @@
-from kisiac.common import UserSet
+import base64
+import platform
+import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-import platform
-import re
-from typing import Any, Iterable, Self, Sequence
-import base64
+from typing import Any, Self
 
-import jinja2
-from kisiac.encryption import EncryptionSetup
-import yaml
 import git
-from pyfstab.entry import Entry as FstabEntry
+import jinja2
+import yaml
 import yte
 from deepmerge import always_merger
+from pyfstab.entry import Entry as FstabEntry
 
 from kisiac.common import (
     HostAgnosticPath,
     Singleton,
-    cache,
     UserError,
+    UserSet,
+    as_list,
+    cache,
     check_type,
     handle_key_error,
     log_msg,
-    as_list,
 )
+from kisiac.encryption import EncryptionSetup
 from kisiac.lvm import LVMSetup
 from kisiac.zfs import ZFSSetup
-
 
 config_file_path = Path("/etc/kisiac.yaml")
 
@@ -307,7 +307,7 @@ class Config(Singleton):
             with open(config_file_path, "r") as f:
                 self._config.update(load_config(f))
             config_set = True
-        except (FileNotFoundError, IOError):
+        except (OSError, FileNotFoundError):
             # ignore missing file or read errors, we fall back to env var
             pass
         except Exception as e:
@@ -487,5 +487,5 @@ def load_config(config) -> dict[Any, Any]:
     config = yte.process_yaml(config, require_use_yte=True)
 
     if not isinstance(config, dict):
-        raise ValueError("Config has to be a mapping")
+        raise TypeError("Config has to be a mapping")
     return config

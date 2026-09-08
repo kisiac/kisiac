@@ -1,3 +1,4 @@
+import sys
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from kisiac.check import check_host
@@ -57,4 +58,4 @@ def main() -> None:
                 parser.print_help()
     except UserError as e:
         log_msg(e)
-        exit(1)
+        sys.exit(1)

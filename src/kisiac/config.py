@@ -13,6 +13,7 @@ import yaml
 import git
 from pyfstab.entry import Entry as FstabEntry
 import yte
+from deepmerge import always_merger
 
 from kisiac.common import (
     HostAgnosticPath,
@@ -142,7 +143,9 @@ class File:
             if target_path.read_text() == self.content:
                 return []
             if not overwrite_existing:
-                target_path = target_path.with_suffix(f"{target_path.suffix}.updated")
+                target_path = target_path.with_suffix(
+                    f"{self.target_path.suffix}.updated"
+                )
         created = []
         for ancestor in target_path.parents[::-1][1:]:
             if not ancestor.exists():
@@ -218,16 +221,18 @@ class Files:
             config_path = base / "kisiac.yaml"
             if self._is_provided(config_path):
                 with open(config_path, "r") as f:
-                    config.update(load_config(f))
+                    always_merger.merge(config, load_config(f))
         return config
 
     def get_files(self, user: str | None) -> Iterable[File]:
         if user is not None:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
+            prefix = Path(f"~{user}")
         else:
             file_type = "system_files"
             vars = self.vars
+            prefix = Path("/")
 
             # yield built-in system files
             templates = jinja2.Environment(
@@ -264,7 +269,7 @@ class Files:
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
-                    yield File(Path("/") / (base / f).relative_to(collection), content)
+                    yield File(prefix / (base / f).relative_to(collection), content)
 
 
 @dataclass

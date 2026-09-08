@@ -1,3 +1,4 @@
+from typing import ClassVar
 from copy import copy
 from dataclasses import dataclass, field
 import json
@@ -74,15 +75,16 @@ def update_permissions(host: str) -> None:
         host_path = HostAgnosticPath(path, host=host, sudo=True)
 
         if permissions.setgid:
-            host_path.chmod("g+s")
+            host_path.chmod("g+s", only_dirs=True)
         if permissions.setuid:
-            host_path.chmod("u+s")
+            host_path.chmod("u+s", only_dirs=True)
         if permissions.sticky:
-            host_path.chmod("+t")
+            host_path.chmod("+t", only_dirs=True)
 
         user_perms = PermissionFlagHandler(prefix="u")
         group_perms = PermissionFlagHandler(prefix="g")
         other_perms = PermissionFlagHandler(prefix="o")
+        mask_perms = PermissionFlagHandler(prefix="m")
 
         def register_user_set(user_set: UserSet | None, flag: str) -> None:
             if user_set == UserSet.owner:
@@ -90,10 +92,12 @@ def update_permissions(host: str) -> None:
             elif user_set == UserSet.group:
                 user_perms.register(flag)
                 group_perms.register(flag)
+                mask_perms.register(flag)
             elif user_set == UserSet.others:
                 user_perms.register(flag)
                 group_perms.register(flag)
                 other_perms.register(flag)
+                mask_perms.register(flag)
             elif user_set is None or user_set == UserSet.nobody:
                 return
 
@@ -114,6 +118,7 @@ def update_permissions(host: str) -> None:
             user_perms.get_setfacl_arg(),
             group_perms.get_setfacl_arg(),
             other_perms.get_setfacl_arg(),
+            mask_perms.get_setfacl_arg(),
         )
 
         if permissions.setgid:
@@ -121,6 +126,7 @@ def update_permissions(host: str) -> None:
                 user_perms.get_setfacl_arg(),
                 group_perms.get_setfacl_arg(),
                 other_perms.get_setfacl_arg(),
+                mask_perms.get_setfacl_arg(),
                 default=True,
             )
         else:
@@ -133,6 +139,7 @@ def update_permissions(host: str) -> None:
 class PermissionFlagHandler:
     prefix: str
     flags: set[str] = field(default_factory=set)
+    flag_order: ClassVar[str] = "rwxXsS"
 
     def register(self, flag: str) -> None:
         self.flags.add(flag)
@@ -152,7 +159,10 @@ class PermissionFlagHandler:
         nothing_flag: str,
         whitelist: set[str] | None = None,
     ) -> str:
-        flags = [flag for flag in self.flags if whitelist is None or flag in whitelist]
+        flags = sorted(
+            [flag for flag in self.flags if whitelist is None or flag in whitelist],
+            key=self.flag_order.index,
+        )
         flags = "".join(flags) if flags else nothing_flag
         return f"{prefix}{sep}{flags}"
 

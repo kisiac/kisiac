@@ -40,6 +40,7 @@ def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) 
 
 def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None:
     calls = []
+    snap_checks = iter([False, True])
 
     monkeypatch.setattr(update, "default_system_software", [])
     monkeypatch.setattr(
@@ -48,7 +49,7 @@ def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None
     monkeypatch.setattr(
         update.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=True)
     )
-    monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: False)
+    monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: next(snap_checks))
 
     def fake_run_cmd(*args, **kwargs):
         cmd = args[0]

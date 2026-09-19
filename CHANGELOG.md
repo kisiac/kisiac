@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/kisiac/kisiac/compare/v2.1.0...v2.2.0) (2026-09-19)
+
+
+### Features
+
+* prefer DEB packages and fall back to Snap for system software installation ([#40](https://github.com/kisiac/kisiac/issues/40)) ([1613392](https://github.com/kisiac/kisiac/commit/1613392bd80c77d6f233503e7021847c4ff0b52f))
+
 ## [2.1.0](https://github.com/kisiac/kisiac/compare/v2.0.0...v2.1.0) (2026-09-08)
 
 

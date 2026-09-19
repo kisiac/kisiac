@@ -9,6 +9,7 @@ from kisiac.common import (
     UserError,
     cmd_to_str,
     confirm_action,
+    exists_cmd,
     is_in_tmux_or_screen,
     log_msg,
     multiline_input,
@@ -87,12 +88,43 @@ def update_system_packages(host: str) -> None:
     run_cmd(["apt-get", "--yes", "update"], sudo=True, host=host)
     if not UpdateHostSettings.get_instance().skip_system_upgrade:
         run_cmd(["apt-get", "--yes", "upgrade"], sudo=True, host=host)
-    run_cmd(
-        ["apt-get", "--yes", "install"]
-        + list(set(Config.get_instance().system_software + default_system_software)),
-        sudo=True,
-        host=host,
+    software = sorted(
+        set(Config.get_instance().system_software + default_system_software)
     )
+
+    deb_software = []
+    snap_software = []
+
+    for pkg in software:
+        res = run_cmd(
+            ["apt-cache", "show", "--no-all-versions", pkg],
+            host=host,
+            check=False,
+        )
+        if res.returncode == 0:
+            deb_software.append(pkg)
+        else:
+            snap_software.append(pkg)
+
+    if deb_software:
+        run_cmd(
+            ["apt-get", "--yes", "install", *deb_software],
+            sudo=True,
+            host=host,
+        )
+
+    if snap_software:
+        if not exists_cmd("snap", host=host, sudo=True):
+            run_cmd(["apt-get", "--yes", "install", "snapd"], sudo=True, host=host)
+        for pkg in snap_software:
+            installed = run_cmd(
+                ["snap", "list", pkg],
+                sudo=True,
+                host=host,
+                check=False,
+            )
+            if installed.returncode != 0:
+                run_cmd(["snap", "install", pkg], sudo=True, host=host)
 
 
 def update_encryptions(host: str) -> None:

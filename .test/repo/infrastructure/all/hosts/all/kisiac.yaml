@@ -53,6 +53,8 @@ user_software:
 system_software:
   - stress-ng
   - smartmontools
+  - snap:hello-world
+  - flatpak:org.freedesktop.cli.hello
 
 messages:
   - >

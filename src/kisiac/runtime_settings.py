@@ -91,3 +91,50 @@ class CheckHostSettings(SettingsBase):
             "metavar": "HOST",
         },
     )
+
+
+@dataclass
+class TestConfigSettings(SettingsBase):
+    repo: str = field(
+        default="",
+        metadata={
+            "required": True,
+            "help": "Path or URL to the kisiac config repo to test",
+        },
+    )
+    runtime: str = field(
+        default="",
+        metadata={
+            "help": (
+                "Container runtime to use (docker/podman/apptainer/udocker). "
+                "Auto-detected if not specified."
+            )
+        },
+    )
+    image: str = field(
+        default="ghcr.io/prefix-dev/pixi:latest",
+        metadata={
+            "help": "Container image for testing (defaults to the pixi Docker image)"
+        },
+    )
+    hostname: str = field(
+        default="",
+        metadata={
+            "help": (
+                "Hostname to simulate in the container. "
+                "Defaults to the current machine's hostname."
+            )
+        },
+    )
+    kisiac_config: str = field(
+        default="",
+        metadata={
+            "help": "Path to an additional kisiac config YAML file to merge with the repo config"
+        },
+    )
+    upgrade: bool = field(
+        default=False,
+        metadata={
+            "help": "Perform system package upgrades inside the test container"
+        },
+    )

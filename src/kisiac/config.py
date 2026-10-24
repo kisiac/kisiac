@@ -345,14 +345,15 @@ class Config(Singleton):
 
         for username, settings in users.items():
             check_type(f"user {username}", settings, dict)
-            primary_group = settings["groups"]["primary"]
-            secondary_groups = settings["groups"].get("secondary", [])
+            groups = settings.get("groups", {})
+            primary_group = groups["primary"]
+            secondary_groups = groups.get("secondary", [])
             check_type(f"user {username} groups", secondary_groups, list)
             managed = settings.get("managed", True)
             check_type(f"user {username} managed", managed, bool)
             yield User(
                 username,
-                ssh_pub_key=settings["ssh_pub_key"],
+                ssh_pub_key=settings.get("ssh_pub_key"),
                 vars=settings.get("vars", {}),
                 primary_group=primary_group,
                 secondary_groups=list(map(str, secondary_groups)),

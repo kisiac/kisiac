@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.0](https://github.com/kisiac/kisiac/compare/v2.1.0...v2.2.0) (2026-10-24)
+
+
+### Features
+
+* allow to specify unmanaged users ([1802d51](https://github.com/kisiac/kisiac/commit/1802d518c16bcc5c7f5bf3ce2d9ce9454d9eb358))
+* prefer DEB packages and fall back to Snap for system software installation ([#40](https://github.com/kisiac/kisiac/issues/40)) ([1613392](https://github.com/kisiac/kisiac/commit/1613392bd80c77d6f233503e7021847c4ff0b52f))
+
+
+### Bug Fixes
+
+* ensure that managed users are properly parsed ([7818400](https://github.com/kisiac/kisiac/commit/78184003d6caacbcf95cc144926062e695b147cd))
+
 ## [2.1.0](https://github.com/kisiac/kisiac/compare/v2.0.0...v2.1.0) (2026-09-08)
 
 

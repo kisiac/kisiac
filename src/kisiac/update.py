@@ -1,3 +1,4 @@
+import shlex
 import sys
 from collections.abc import Callable
 from functools import partial
@@ -54,6 +55,9 @@ def update_host(host: str) -> None:
         )
 
     config = Config.get_instance()
+
+    run_update_hooks(host, system_hooks=config.system_pre_update_hooks)
+
     for file in config.files.get_files(user=None):
         log_msg("Updating system file", file.target_path, host=host)
         file.write(overwrite_existing=True, host=host, sudo=True)
@@ -82,6 +86,32 @@ def update_host(host: str) -> None:
     update_permissions(host)
 
     run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
+
+    run_update_hooks(
+        host,
+        system_hooks=config.system_post_update_hooks,
+        user_hooks=config.user_post_update_hooks,
+    )
+
+
+def run_update_hooks(
+    host: str, system_hooks: list[str], user_hooks: list[str] | None = None
+) -> None:
+    config = Config.get_instance()
+    for hook in system_hooks:
+        log_msg("Running system update hook", hook, host=host)
+        run_cmd(shlex.split(hook), host=host, sudo=True)
+    if user_hooks is not None:
+        for user in config.users:
+            for hook in user_hooks:
+                log_msg(
+                    f"Running update hook for user {user.username}", hook, host=host
+                )
+                run_cmd(
+                    ["sudo", "-u", user.username, "-i", *shlex.split(hook)],
+                    host=host,
+                    sudo=True,
+                )
 
 
 def update_system_packages(host: str) -> None:

@@ -415,6 +415,24 @@ class Config(Singleton):
         return system_software
 
     @property
+    def user_post_update_hooks(self) -> list[str]:
+        hooks = self.get("user_post_update_hooks", default=[])
+        check_type("user_post_update_hooks key", hooks, list)
+        return hooks
+
+    @property
+    def system_pre_update_hooks(self) -> list[str]:
+        hooks = self.get("system_pre_update_hooks", default=[])
+        check_type("system_pre_update_hooks key", hooks, list)
+        return hooks
+
+    @property
+    def system_post_update_hooks(self) -> list[str]:
+        hooks = self.get("system_post_update_hooks", default=[])
+        check_type("system_post_update_hooks key", hooks, list)
+        return hooks
+
+    @property
     def messages(self) -> Sequence[str]:
         messages = self.get("messages", default=[])
         check_type("message key", messages, list)

@@ -8,6 +8,8 @@ users:
         - researchers
     vars:
       something: foo
+  runner:
+    managed: false
 
 user_software:
   - pkg: snakemake

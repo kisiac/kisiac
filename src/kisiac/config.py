@@ -279,6 +279,7 @@ class User:
     secondary_groups: list[str]
     ssh_pub_key: str
     vars: dict[str, Any]
+    managed: bool = True
 
     def fix_permissions(self, paths: Iterable[Path], host: str) -> None:
         for path in paths:
@@ -347,12 +348,15 @@ class Config(Singleton):
             primary_group = settings["groups"]["primary"]
             secondary_groups = settings["groups"].get("secondary", [])
             check_type(f"user {username} groups", secondary_groups, list)
+            managed = settings.get("managed", True)
+            check_type(f"user {username} managed", managed, bool)
             yield User(
                 username,
                 ssh_pub_key=settings["ssh_pub_key"],
                 vars=settings.get("vars", {}),
                 primary_group=primary_group,
                 secondary_groups=list(map(str, secondary_groups)),
+                managed=managed,
             )
 
     @property

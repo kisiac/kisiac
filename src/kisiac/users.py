@@ -6,7 +6,7 @@ from kisiac.config import Config
 
 
 def setup_users(host: str) -> None:
-    users = list(Config.get_instance().users)
+    users = [user for user in Config.get_instance().users if user.managed]
 
     groups = {group for user in users for group in user.secondary_groups} | {
         user.primary_group for user in users

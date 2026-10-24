@@ -346,7 +346,7 @@ class Config(Singleton):
         for username, settings in users.items():
             check_type(f"user {username}", settings, dict)
             groups = settings.get("groups", {})
-            primary_group = groups["primary"]
+            primary_group = groups.get("primary")
             secondary_groups = groups.get("secondary", [])
             check_type(f"user {username} groups", secondary_groups, list)
             managed = settings.get("managed", True)

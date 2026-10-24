@@ -6,10 +6,10 @@ from kisiac.config import Config
 
 
 def setup_users(host: str) -> None:
-    users = [user for user in Config.get_instance().users if user.managed]
+    managed_users = [user for user in Config.get_instance().users if user.managed]
 
-    groups = {group for user in users for group in user.secondary_groups} | {
-        user.primary_group for user in users
+    groups = {group for user in managed_users for group in user.secondary_groups} | {
+        user.primary_group for user in managed_users
     }
 
     for group in groups:
@@ -17,7 +17,7 @@ def setup_users(host: str) -> None:
         if run_cmd(["getent", "group", group], check=False, host=host).returncode == 2:
             run_cmd(["groupadd", group], host=host, sudo=True)
 
-    for user in Config.get_instance().users:
+    for user in managed_users:
         # create user if it does not exist
         if not is_existing_user(user.username):
             group_arg = []

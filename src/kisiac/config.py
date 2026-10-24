@@ -426,8 +426,10 @@ class Config(Singleton):
         return EncryptionSetup.from_config(encryption)
 
     @property
-    def lvm(self) -> LVMSetup:
-        lvm = self.get("lvm", default={})
+    def lvm(self) -> LVMSetup | None:
+        lvm = self.get("lvm", default=None)
+        if lvm is None:
+            return None
         return LVMSetup.from_config(lvm)
 
     @property
@@ -436,15 +438,18 @@ class Config(Singleton):
         return ZFSSetup.from_config(zfs)
 
     @property
-    def filesystems(self) -> list[Filesystem]:
-        filesystems = self.get("filesystems", default=[])
+    def filesystems(self) -> set[Filesystem] | None:
+        filesystems = self.get("filesystems", default=None)
+        if filesystems is None:
+            return None
+
         check_type("filesystems key", filesystems, list)
 
-        entries = []
+        entries = set()
         for settings in filesystems:
             check_type("filesystem item", settings, dict)
             device = settings.get("device")
-            entries.append(
+            entries.add(
                 Filesystem(
                     device=Path(device) if device is not None else None,
                     label=settings.get("label"),

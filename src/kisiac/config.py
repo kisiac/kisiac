@@ -249,8 +249,6 @@ class Files:
             )
             yield File(target_path=Path("/etc/profile.d/kisiac.sh"), content=content)
 
-        # TODO dbg
-        print(vars)
         for host in self.host_stack():
             collection = host / file_type
             templates = jinja2.Environment(
@@ -259,6 +257,9 @@ class Files:
             )
             for base, _, files in (collection).walk():
                 for f in files:
+                    log_msg("Processing file", base / f, host=host)
+                    # TODO dbg
+                    print(vars, user, file_type)
                     if f.endswith(".j2"):
                         content = templates.get_template(str(base / f)).render(**vars)
                     elif f.endswith(".yaml"):

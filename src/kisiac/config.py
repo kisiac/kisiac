@@ -13,6 +13,7 @@ import yaml
 import yte
 from deepmerge import always_merger
 from pyfstab.entry import Entry as FstabEntry
+from yte.exceptions import YteError
 
 from kisiac.common import (
     HostAgnosticPath,
@@ -274,7 +275,7 @@ class Files:
                                 content = yte.process_yaml(
                                     fileobj, variables=vars, require_use_yte=True
                                 )
-                        except yte.YteError as e:
+                        except YteError as e:
                             raise UserError(
                                 f"Error processing YAML {filepath_msg}: {e}"
                             )

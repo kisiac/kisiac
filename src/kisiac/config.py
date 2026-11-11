@@ -13,6 +13,7 @@ import yaml
 import yte
 from deepmerge import always_merger
 from pyfstab.entry import Entry as FstabEntry
+from yte.exceptions import YteError
 
 from kisiac.common import (
     HostAgnosticPath,
@@ -229,10 +230,12 @@ class Files:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
             prefix = Path(f"~{user}")
+            user_msg = f" for user {user}"
         else:
             file_type = "system_files"
             vars = self.vars
             prefix = Path("/")
+            user_msg = ""
 
             # yield built-in system files
             templates = jinja2.Environment(
@@ -257,18 +260,33 @@ class Files:
             )
             for base, _, files in (collection).walk():
                 for f in files:
+                    filepath_msg = (base / f).relative_to(self.repo_cache)
+                    log_msg("Processing file", filepath_msg)
                     if f.endswith(".j2"):
-                        content = templates.get_template(str(base / f)).render(**vars)
+                        try:
+                            content = templates.get_template(str(base / f)).render(
+                                **vars
+                            )
+                        except jinja2.TemplateError as e:
+                            raise UserError(
+                                f"Error processing template {filepath_msg}{user_msg}: {e}"
+                            )
                     elif f.endswith(".yaml"):
-                        with open(base / f, "r") as fileobj:
-                            content = yte.process_yaml(
-                                fileobj, variables=vars, require_use_yte=True
+                        try:
+                            with open(base / f, "r") as fileobj:
+                                content = yte.process_yaml(
+                                    fileobj, variables=vars, require_use_yte=True
+                                )
+                        except YteError as e:
+                            raise UserError(
+                                f"Error processing YAML {filepath_msg}{user_msg}: {e}"
                             )
                         assert content is not None
                         content = yaml.dump(content, indent=2)
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
+
                     yield File(prefix / (base / f).relative_to(collection), content)
 
 
@@ -279,6 +297,7 @@ class User:
     secondary_groups: list[str]
     ssh_pub_key: str
     vars: dict[str, Any]
+    managed: bool = True
 
     def fix_permissions(self, paths: Iterable[Path], host: str) -> None:
         for path in paths:
@@ -344,15 +363,19 @@ class Config(Singleton):
 
         for username, settings in users.items():
             check_type(f"user {username}", settings, dict)
-            primary_group = settings["groups"]["primary"]
-            secondary_groups = settings["groups"].get("secondary", [])
+            groups = settings.get("groups", {})
+            primary_group = groups.get("primary")
+            secondary_groups = groups.get("secondary", [])
             check_type(f"user {username} groups", secondary_groups, list)
+            managed = settings.get("managed", True)
+            check_type(f"user {username} managed", managed, bool)
             yield User(
                 username,
-                ssh_pub_key=settings["ssh_pub_key"],
+                ssh_pub_key=settings.get("ssh_pub_key"),
                 vars=settings.get("vars", {}),
                 primary_group=primary_group,
                 secondary_groups=list(map(str, secondary_groups)),
+                managed=managed,
             )
 
     @property
@@ -362,7 +385,7 @@ class Config(Singleton):
         return vars
 
     def user_vars(self, user: str) -> dict[str, Any]:
-        return self.get("users", default={})[user].get("vars", {})
+        return self.get("users", default={}).get(user, {}).get("vars", {})
 
     @property
     def infrastructure(self) -> str | None:

@@ -249,6 +249,8 @@ class Files:
             )
             yield File(target_path=Path("/etc/profile.d/kisiac.sh"), content=content)
 
+        # TODO dbg
+        print(vars)
         for host in self.host_stack():
             collection = host / file_type
             templates = jinja2.Environment(
@@ -367,7 +369,7 @@ class Config(Singleton):
         return vars
 
     def user_vars(self, user: str) -> dict[str, Any]:
-        return self.get("users", default={})[user].get("vars", {})
+        return self.get("users", default={}).get(user, {}).get("vars", {})
 
     @property
     def infrastructure(self) -> str | None:

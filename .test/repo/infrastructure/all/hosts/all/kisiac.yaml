@@ -13,6 +13,15 @@ users:
     vars:
       something: foo
 
+user_update_hooks:
+  - echo test
+
+system_pre_update_hooks:
+  - echo test
+
+system_post_update_hooks:
+  - echo test
+
 user_software:
   - pkg: snakemake
     with:

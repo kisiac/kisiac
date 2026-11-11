@@ -257,21 +257,27 @@ class Files:
             )
             for base, _, files in (collection).walk():
                 for f in files:
-                    log_msg("Processing file", base / f, host=host)
-                    # TODO dbg
-                    print(vars, user, file_type)
+                    filepath_msg = (base / f).relative_to(self.repo_cache)
+                    log_msg("Processing file", filepath_msg)
                     if f.endswith(".j2"):
-                        content = templates.get_template(str(base / f)).render(**vars)
+                        try:
+                            content = templates.get_template(str(base / f)).render(**vars)
+                        except jinja2.TemplateError as e:
+                            raise UserError(f"Error processing template {filepath_msg}: {e}")
                     elif f.endswith(".yaml"):
-                        with open(base / f, "r") as fileobj:
-                            content = yte.process_yaml(
-                                fileobj, variables=vars, require_use_yte=True
-                            )
+                        try:
+                            with open(base / f, "r") as fileobj:
+                                content = yte.process_yaml(
+                                    fileobj, variables=vars, require_use_yte=True
+                                )
+                        except yte.YteError as e:
+                            raise UserError(f"Error processing YAML {filepath_msg}: {e}")
                         assert content is not None
                         content = yaml.dump(content, indent=2)
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
+                    
                     yield File(prefix / (base / f).relative_to(collection), content)
 
 

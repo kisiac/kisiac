@@ -230,10 +230,12 @@ class Files:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
             prefix = Path(f"~{user}")
+            user_msg = f" for user {user}"
         else:
             file_type = "system_files"
             vars = self.vars
             prefix = Path("/")
+            user_msg = ""
 
             # yield built-in system files
             templates = jinja2.Environment(
@@ -267,7 +269,7 @@ class Files:
                             )
                         except jinja2.TemplateError as e:
                             raise UserError(
-                                f"Error processing template {filepath_msg}: {e}"
+                                f"Error processing template {filepath_msg}{user_msg}: {e}"
                             )
                     elif f.endswith(".yaml"):
                         try:
@@ -277,7 +279,7 @@ class Files:
                                 )
                         except YteError as e:
                             raise UserError(
-                                f"Error processing YAML {filepath_msg}: {e}"
+                                f"Error processing YAML {filepath_msg}{user_msg}: {e}"
                             )
                         assert content is not None
                         content = yaml.dump(content, indent=2)

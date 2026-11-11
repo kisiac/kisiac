@@ -10,6 +10,8 @@ users:
       something: foo
   runner:
     managed: false
+    vars:
+      something: foo
 
 user_software:
   - pkg: snakemake

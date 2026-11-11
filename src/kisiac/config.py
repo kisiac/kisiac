@@ -1,32 +1,34 @@
-from kisiac.common import UserSet
+import base64
+import platform
+import re
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-import platform
-import re
-from typing import Any, Iterable, Self, Sequence
-import base64
+from typing import Any, Self
 
-import jinja2
-from kisiac.encryption import EncryptionSetup
-import yaml
 import git
-from pyfstab.entry import Entry as FstabEntry
+import jinja2
+import yaml
 import yte
+from deepmerge import always_merger
+from pyfstab.entry import Entry as FstabEntry
+from yte.exceptions import YteError
 
 from kisiac.common import (
     HostAgnosticPath,
     Singleton,
-    cache,
     UserError,
+    UserSet,
+    as_list,
+    cache,
     check_type,
     handle_key_error,
     log_msg,
-    as_list,
 )
+from kisiac.encryption import EncryptionSetup
 from kisiac.lvm import LVMSetup
 from kisiac.zfs import ZFSSetup
-
 
 config_file_path = Path("/etc/kisiac.yaml")
 
@@ -142,7 +144,9 @@ class File:
             if target_path.read_text() == self.content:
                 return []
             if not overwrite_existing:
-                target_path = target_path.with_suffix(f"{target_path.suffix}.updated")
+                target_path = target_path.with_suffix(
+                    f"{self.target_path.suffix}.updated"
+                )
         created = []
         for ancestor in target_path.parents[::-1][1:]:
             if not ancestor.exists():
@@ -218,18 +222,20 @@ class Files:
             config_path = base / "kisiac.yaml"
             if self._is_provided(config_path):
                 with open(config_path, "r") as f:
-                    config.update(load_config(f))
+                    always_merger.merge(config, load_config(f))
         return config
 
     def get_files(self, user: str | None) -> Iterable[File]:
         if user is not None:
             file_type = "user_files"
             vars = dict(self.vars) | self.user_vars(user)
-            prefix = Path("/home") / user
+            prefix = Path(f"~{user}")
+            user_msg = f" for user {user}"
         else:
             file_type = "system_files"
             vars = self.vars
             prefix = Path("/")
+            user_msg = ""
 
             # yield built-in system files
             templates = jinja2.Environment(
@@ -254,18 +260,33 @@ class Files:
             )
             for base, _, files in (collection).walk():
                 for f in files:
+                    filepath_msg = (base / f).relative_to(self.repo_cache)
+                    log_msg("Processing file", filepath_msg)
                     if f.endswith(".j2"):
-                        content = templates.get_template(str(base / f)).render(**vars)
+                        try:
+                            content = templates.get_template(str(base / f)).render(
+                                **vars
+                            )
+                        except jinja2.TemplateError as e:
+                            raise UserError(
+                                f"Error processing template {filepath_msg}{user_msg}: {e}"
+                            )
                     elif f.endswith(".yaml"):
-                        with open(base / f, "r") as fileobj:
-                            content = yte.process_yaml(
-                                fileobj, variables=vars, require_use_yte=True
+                        try:
+                            with open(base / f, "r") as fileobj:
+                                content = yte.process_yaml(
+                                    fileobj, variables=vars, require_use_yte=True
+                                )
+                        except YteError as e:
+                            raise UserError(
+                                f"Error processing YAML {filepath_msg}{user_msg}: {e}"
                             )
                         assert content is not None
                         content = yaml.dump(content, indent=2)
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
+
                     yield File(prefix / (base / f).relative_to(collection), content)
 
 
@@ -276,6 +297,7 @@ class User:
     secondary_groups: list[str]
     ssh_pub_key: str
     vars: dict[str, Any]
+    managed: bool = True
 
     def fix_permissions(self, paths: Iterable[Path], host: str) -> None:
         for path in paths:
@@ -304,7 +326,7 @@ class Config(Singleton):
             with open(config_file_path, "r") as f:
                 self._config.update(load_config(f))
             config_set = True
-        except (FileNotFoundError, IOError):
+        except (OSError, FileNotFoundError):
             # ignore missing file or read errors, we fall back to env var
             pass
         except Exception as e:
@@ -341,15 +363,19 @@ class Config(Singleton):
 
         for username, settings in users.items():
             check_type(f"user {username}", settings, dict)
-            primary_group = settings["groups"]["primary"]
-            secondary_groups = settings["groups"].get("secondary", [])
+            groups = settings.get("groups", {})
+            primary_group = groups.get("primary")
+            secondary_groups = groups.get("secondary", [])
             check_type(f"user {username} groups", secondary_groups, list)
+            managed = settings.get("managed", True)
+            check_type(f"user {username} managed", managed, bool)
             yield User(
                 username,
-                ssh_pub_key=settings["ssh_pub_key"],
+                ssh_pub_key=settings.get("ssh_pub_key"),
                 vars=settings.get("vars", {}),
                 primary_group=primary_group,
                 secondary_groups=list(map(str, secondary_groups)),
+                managed=managed,
             )
 
     @property
@@ -359,7 +385,7 @@ class Config(Singleton):
         return vars
 
     def user_vars(self, user: str) -> dict[str, Any]:
-        return self.get("users", default={})[user].get("vars", {})
+        return self.get("users", default={}).get(user, {}).get("vars", {})
 
     @property
     def infrastructure(self) -> str | None:
@@ -406,6 +432,24 @@ class Config(Singleton):
         system_software = self.get("system_software", default=[])
         check_type("system_software key", system_software, list)
         return system_software
+
+    @property
+    def user_post_update_hooks(self) -> list[str]:
+        hooks = self.get("user_post_update_hooks", default=[])
+        check_type("user_post_update_hooks key", hooks, list)
+        return hooks
+
+    @property
+    def system_pre_update_hooks(self) -> list[str]:
+        hooks = self.get("system_pre_update_hooks", default=[])
+        check_type("system_pre_update_hooks key", hooks, list)
+        return hooks
+
+    @property
+    def system_post_update_hooks(self) -> list[str]:
+        hooks = self.get("system_post_update_hooks", default=[])
+        check_type("system_post_update_hooks key", hooks, list)
+        return hooks
 
     @property
     def messages(self) -> Sequence[str]:
@@ -484,5 +528,5 @@ def load_config(config) -> dict[Any, Any]:
     config = yte.process_yaml(config, require_use_yte=True)
 
     if not isinstance(config, dict):
-        raise ValueError("Config has to be a mapping")
+        raise TypeError("Config has to be a mapping")
     return config

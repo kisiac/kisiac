@@ -37,6 +37,7 @@ jobs:
           touch /tmp/test/prev_exec
           chmod +x /tmp/test/prev_exec
       - uses: prefix-dev/setup-pixi@v0
+      - run: pixi run test
       - name: setup kisiac config
         shell: pixi run bash -e {0}
         run: |

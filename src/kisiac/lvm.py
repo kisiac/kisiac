@@ -1,15 +1,15 @@
+import json
+import re
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
-import json
 from pathlib import Path
-import re
-from typing import Any, Iterable, Self
+from typing import Any, Self
 
 from humanfriendly import parse_size
 
-from kisiac.common import check_type, exists_cmd, run_cmd, UserError
-
+from kisiac.common import UserError, check_type, exists_cmd, run_cmd
 
 CRYPT_PREFIX = "crypt_"
 VGS_DEVICE_REPORT_RE = re.compile(r"^(?P<device>.+)\((?P<info>.+)\)$")

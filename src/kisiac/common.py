@@ -1,12 +1,12 @@
-from enum import StrEnum
-from pathlib import Path
+import os
 import subprocess as sp
 import sys
-from typing import Any, Callable, Iterable, Self, Sequence
-import os
+from collections.abc import Callable, Iterable, Sequence
+from enum import StrEnum
+from pathlib import Path
+from typing import Any, Self
 
 import inquirer
-
 
 cache = Path("~/.cache/kisiac").expanduser()
 
@@ -20,7 +20,7 @@ class UserSet(StrEnum):
 
 def is_in_tmux_or_screen() -> bool:
     term = os.environ.get("TERM", "unknown")
-    return term.startswith("tmux") or term.startswith("screen")
+    return term.startswith(("tmux", "screen"))
 
 
 def as_list(method: Callable[..., Iterable]) -> Callable[..., list]:
@@ -165,8 +165,7 @@ def run_cmd(
             postprocesed_cmd,
             check=check,
             text=True,
-            stdout=sp.PIPE,
-            stderr=sp.PIPE,
+            capture_output=True,
             input=input,
             env=env,
         )
@@ -186,8 +185,6 @@ def run_cmd(
 
 class UserError(Exception):
     """Base class for user-related errors."""
-
-    pass
 
 
 def check_type(item: str, value: Any, expected_type: Any) -> None:
@@ -231,8 +228,10 @@ class HostAgnosticPath:
         else:
             self._run_cmd(["mkdir", "-p", str(self.path)])
 
-    def chmod(self, *mode: str, recursive: bool = True) -> None:
-        self._chperm("chmod", ",".join(mode), recursive=recursive)
+    def chmod(
+        self, *mode: str, recursive: bool = True, only_dirs: bool = False
+    ) -> None:
+        self._chperm("chmod", ",".join(mode), recursive=recursive, only_dirs=only_dirs)
 
     def chown(self, user: str | None, group: str | None = None) -> None:
         if user is not None:
@@ -261,9 +260,27 @@ class HostAgnosticPath:
             recursive=recursive,
         )
 
-    def _chperm(self, cmd: str, *args: str, recursive: bool = True) -> None:
+    def _chperm(
+        self, cmd: str, *args: str, recursive: bool = True, only_dirs: bool = False
+    ) -> None:
         if recursive and self.is_dir():
-            args = ("-R", *args)
+            if only_dirs:
+                self._run_cmd(
+                    [
+                        "find",
+                        str(self.path),
+                        "-type",
+                        "d",
+                        "-exec",
+                        cmd,
+                        *args,
+                        "{}",
+                        "+",
+                    ]
+                )
+                return
+            else:
+                args = ("-R", *args)
         self._run_cmd([cmd, *args, str(self.path)])
 
     def is_local_and_user(self) -> bool:

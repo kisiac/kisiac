@@ -1,26 +1,28 @@
+import shlex
+import sys
+from collections.abc import Callable
 from functools import partial
 from itertools import chain
-import sys
-from typing import Callable
+
+from kisiac import users
 from kisiac.common import (
     HostAgnosticPath,
     UserError,
     cmd_to_str,
     confirm_action,
+    exists_cmd,
     is_in_tmux_or_screen,
     log_msg,
     multiline_input,
     provide_password,
     run_cmd,
 )
+from kisiac.config import Config
 from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
-from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
-from kisiac import users
-from kisiac.config import Config
 from kisiac.lvm import LVMSetup
+from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
 from kisiac.zfs import update_zfs
-
 
 default_system_software = [
     "openssh-server",
@@ -53,6 +55,9 @@ def update_host(host: str) -> None:
         )
 
     config = Config.get_instance()
+
+    run_update_hooks(host, system_hooks=config.system_pre_update_hooks)
+
     for file in config.files.get_files(user=None):
         log_msg("Updating system file", file.target_path, host=host)
         file.write(overwrite_existing=True, host=host, sudo=True)
@@ -82,17 +87,74 @@ def update_host(host: str) -> None:
 
     run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
 
+    run_update_hooks(
+        host,
+        system_hooks=config.system_post_update_hooks,
+        user_hooks=config.user_post_update_hooks,
+    )
+
+
+def run_update_hooks(
+    host: str, system_hooks: list[str], user_hooks: list[str] | None = None
+) -> None:
+    config = Config.get_instance()
+    for hook in system_hooks:
+        log_msg("Running system update hook", hook, host=host)
+        run_cmd(shlex.split(hook), host=host, sudo=True)
+    if user_hooks is not None:
+        for user in config.users:
+            for hook in user_hooks:
+                log_msg(
+                    f"Running update hook for user {user.username}", hook, host=host
+                )
+                run_cmd(
+                    ["sudo", "-u", user.username, "-i", *shlex.split(hook)],
+                    host=host,
+                    sudo=True,
+                )
+
 
 def update_system_packages(host: str) -> None:
     run_cmd(["apt-get", "--yes", "update"], sudo=True, host=host)
     if not UpdateHostSettings.get_instance().skip_system_upgrade:
         run_cmd(["apt-get", "--yes", "upgrade"], sudo=True, host=host)
-    run_cmd(
-        ["apt-get", "--yes", "install"]
-        + list(set(Config.get_instance().system_software + default_system_software)),
-        sudo=True,
-        host=host,
+    software = sorted(
+        set(Config.get_instance().system_software + default_system_software)
     )
+
+    deb_software = []
+    snap_software = []
+
+    for pkg in software:
+        res = run_cmd(
+            ["apt-cache", "show", "--no-all-versions", pkg],
+            host=host,
+            check=False,
+        )
+        if res.returncode == 0:
+            deb_software.append(pkg)
+        else:
+            snap_software.append(pkg)
+
+    if deb_software:
+        run_cmd(
+            ["apt-get", "--yes", "install", *deb_software],
+            sudo=True,
+            host=host,
+        )
+
+    if snap_software:
+        if not exists_cmd("snap", host=host, sudo=True):
+            run_cmd(["apt-get", "--yes", "install", "snapd"], sudo=True, host=host)
+        for pkg in snap_software:
+            installed = run_cmd(
+                ["snap", "list", pkg],
+                sudo=True,
+                host=host,
+                check=False,
+            )
+            if installed.returncode != 0:
+                run_cmd(["snap", "install", pkg], sudo=True, host=host)
 
 
 def update_encryptions(host: str) -> None:
@@ -105,14 +167,13 @@ def update_encryptions(host: str) -> None:
     for encryption in desired:
         if encryption.name is not None:
             curr_encryption = current_by_name.get(encryption.name)
-            if curr_encryption is not None:
-                if curr_encryption != encryption:
-                    # TODO support such changes
-                    raise UserError(
-                        f"Encryption {encryption.name} has changed. "
-                        "Modifying it via kisiac is not yet supported. "
-                        f"Current: {curr_encryption}, Desired: {encryption}"
-                    )
+            if curr_encryption is not None and curr_encryption != encryption:
+                # TODO support such changes
+                raise UserError(
+                    f"Encryption {encryption.name} has changed. "
+                    "Modifying it via kisiac is not yet supported. "
+                    f"Current: {curr_encryption}, Desired: {encryption}"
+                )
 
     dd_cmds = []
     format_cmds = []

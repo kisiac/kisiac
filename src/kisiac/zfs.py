@@ -1,10 +1,16 @@
-from kisiac.common import confirm_action
-from kisiac.common import cmd_to_str
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from kisiac.common import UserError, check_type, exists_cmd, provide_password, run_cmd
+from kisiac.common import (
+    UserError,
+    check_type,
+    cmd_to_str,
+    confirm_action,
+    exists_cmd,
+    provide_password,
+    run_cmd,
+)
 
 
 @dataclass(frozen=True)
@@ -24,6 +30,7 @@ class ZFSDataset:
     atime: str | None = None
     encryption: str | None = None
     sync: str | None = None
+    recordsize: str | None = None
 
     @property
     def full_name(self) -> str:
@@ -124,7 +131,9 @@ class ZFSSetup:
                 ashift = dataset.get("ashift")
                 check_type(f"ashift of {item_msg}", ashift, (int, type(None)))
 
-                def get_option_value(option_name: str) -> str | None:
+                def get_option_value(
+                    option_name: str, dataset=dataset, item_msg=item_msg
+                ) -> str | None:
                     value = dataset.get(option_name)
                     check_type(f"{option_name} of {item_msg}", value, (str, type(None)))
                     return value
@@ -139,6 +148,7 @@ class ZFSSetup:
                     encryption=get_option_value("encryption"),
                     atime=atime,
                     sync=sync,
+                    recordsize=get_option_value("recordsize"),
                 )
                 setup.datasets[ds.full_name] = ds
 
@@ -159,13 +169,13 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             "ZFS was configured, but zpool/zfs commands are unavailable. Ensure zfsutils-linux is installed."
         )
 
-    existing_pools = set(
+    existing_pools = {
         line.strip()
         for line in run_cmd(
             ["zpool", "list", "-H", "-o", "name"], host=host, sudo=True
         ).stdout.splitlines()
         if line.strip()
-    )
+    }
 
     cmds = []
     encryption_cmds = []
@@ -174,7 +184,7 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         if pool_name not in existing_pools:
             cmds.append(pool.get_create_cmd())
 
-    existing_datasets = set(
+    existing_datasets = {
         line.strip()
         for line in run_cmd(
             ["zfs", "list", "-H", "-o", "name", "-t", "filesystem"],
@@ -182,7 +192,7 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             sudo=True,
         ).stdout.splitlines()
         if line.strip()
-    )
+    }
 
     for dataset_name, dataset in desired.datasets.items():
         options = ["acltype=posixacl", "xattr=sa"]
@@ -198,6 +208,8 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
             options.append(f"atime={dataset.atime}")
         if dataset.sync is not None:
             options.append(f"sync={dataset.sync}")
+        if dataset.recordsize is not None:
+            options.append(f"recordsize={dataset.recordsize}")
 
         if dataset_name not in existing_datasets:
             create_cmd = [

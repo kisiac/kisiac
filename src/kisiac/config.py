@@ -261,9 +261,13 @@ class Files:
                     log_msg("Processing file", filepath_msg)
                     if f.endswith(".j2"):
                         try:
-                            content = templates.get_template(str(base / f)).render(**vars)
+                            content = templates.get_template(str(base / f)).render(
+                                **vars
+                            )
                         except jinja2.TemplateError as e:
-                            raise UserError(f"Error processing template {filepath_msg}: {e}")
+                            raise UserError(
+                                f"Error processing template {filepath_msg}: {e}"
+                            )
                     elif f.endswith(".yaml"):
                         try:
                             with open(base / f, "r") as fileobj:
@@ -271,13 +275,15 @@ class Files:
                                     fileobj, variables=vars, require_use_yte=True
                                 )
                         except yte.YteError as e:
-                            raise UserError(f"Error processing YAML {filepath_msg}: {e}")
+                            raise UserError(
+                                f"Error processing YAML {filepath_msg}: {e}"
+                            )
                         assert content is not None
                         content = yaml.dump(content, indent=2)
                     else:
                         with open(base / f, "r") as content:
                             content = content.read()
-                    
+
                     yield File(prefix / (base / f).relative_to(collection), content)
 
 

@@ -260,6 +260,7 @@ def update_lvm(host: str) -> None:
             )
 
     def lv_cmd(cmd: Callable, predicate: Callable):
+        assert desired is not None
         cmds.extend(
             cmd(lv, vg)
             for vg in desired.vgs.values()

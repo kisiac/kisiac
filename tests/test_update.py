@@ -1,13 +1,13 @@
 import subprocess as sp
 from types import SimpleNamespace
 
-from kisiac import update
+from kisiac import update, system_packages
 
 
 def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) -> None:
     calls = []
 
-    monkeypatch.setattr(update, "default_system_software", [])
+    monkeypatch.setattr(system_packages, "default_system_software", [])
     monkeypatch.setattr(
         update.Config, "get_instance", lambda: SimpleNamespace(system_software=["htop", "lazygit"])
     )
@@ -42,7 +42,7 @@ def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None
     calls = []
     snap_checks = iter([False, True])
 
-    monkeypatch.setattr(update, "default_system_software", [])
+    monkeypatch.setattr(system_packages, "default_system_software", [])
     monkeypatch.setattr(
         update.Config, "get_instance", lambda: SimpleNamespace(system_software=["lazygit"])
     )

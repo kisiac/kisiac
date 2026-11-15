@@ -183,6 +183,9 @@ def update_encryptions(host: str) -> None:
 
 def update_lvm(host: str) -> None:
     desired = Config.get_instance().lvm
+    if desired is None:
+        # unmanaged lvm
+        return
     current = LVMSetup.from_system(host=host)
     device_infos = DeviceInfos(host)
 
@@ -257,6 +260,7 @@ def update_lvm(host: str) -> None:
             )
 
     def lv_cmd(cmd: Callable, predicate: Callable):
+        assert desired is not None
         cmds.extend(
             cmd(lv, vg)
             for vg in desired.vgs.values()

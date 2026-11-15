@@ -16,7 +16,12 @@ blkid_attrs_re = re.compile(r'(?P<attr>[A-Z]+)="(?P<value>\S+)"')
 
 
 def update_filesystems(host: str) -> None:
-    filesystems = set(Config.get_instance().filesystems)
+    filesystems = Config.get_instance().filesystems
+
+    if filesystems is None:
+        # unmanaged filesystems
+        return
+
     device_infos = DeviceInfos(host)
 
     # First, create filesystems that do not exist yet or need to be changed.

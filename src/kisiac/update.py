@@ -1,4 +1,3 @@
-from collections import defaultdict
 import sys
 from collections.abc import Callable
 from functools import partial
@@ -8,10 +7,8 @@ from kisiac import users
 from kisiac.common import (
     HostAgnosticPath,
     UserError,
-    check_type,
     cmd_to_str,
     confirm_action,
-    exists_cmd,
     is_in_tmux_or_screen,
     log_msg,
     multiline_input,
@@ -22,21 +19,11 @@ from kisiac.config import Config
 from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
 from kisiac.lvm import LVMSetup
-from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
+from kisiac.runtime_settings import GlobalSettings
 from kisiac.zfs import update_zfs
-from src.kisiac.system_packages import PackageSystem, parse_software_spec
-
-default_system_software = [
-    "openssh-server",
-    "openssh-client",
-    "lvm2",
-    "e2fsprogs",
-    "xfsprogs",
-    "btrfs-progs",
-    "smartmontools",
-    "acl",
-    "zfsutils-linux",
-]
+from src.kisiac.system_packages import (
+    update_system_packages,
+)
 
 
 def setup_config() -> None:
@@ -85,34 +72,6 @@ def update_host(host: str) -> None:
     update_permissions(host)
 
     run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
-
-
-def update_system_packages(host: str) -> None:
-    run_cmd(["apt-get", "--yes", "update"], sudo=True, host=host)
-    if not UpdateHostSettings.get_instance().skip_system_upgrade:
-        run_cmd(["apt-get", "--yes", "upgrade"], sudo=True, host=host)
-
-    software = defaultdict(list)
-    for spec in set(Config.get_instance().system_software + default_system_software):
-        pkg = parse_software_spec(spec)
-        software[pkg.pkg_system].append(pkg.name)
-
-    if pkgs := software.get(PackageSystem.APT):
-        run_cmd(
-            ["apt-get", "--yes", "install", *pkgs],
-            sudo=True,
-            host=host,
-        )
-
-    if pkgs:= software.get(PackageSystem.SNAP):
-        if not exists_cmd("snap", host=host, sudo=True):
-            run_cmd(["apt-get", "--yes", "install", "snapd"], sudo=True, host=host)
-        run_cmd(["snap", "install", pkgs], sudo=True, host=host)
-
-    if pkgs := software.get(PackageSystem.FLATPAK):
-        if not exists_cmd("flatpak", host=host, sudo=True):
-            run_cmd(["apt-get", "--yes", "install", "flatpak"], sudo=True, host=host)
-        run_cmd(["flatpak", "install", "-y", *pkgs], sudo=True, host=host)
 
 
 def update_encryptions(host: str) -> None:

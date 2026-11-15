@@ -1,7 +1,7 @@
 import subprocess as sp
 from types import SimpleNamespace
 
-from kisiac import update, system_packages
+from kisiac import runtime_settings, update, system_packages
 
 
 def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) -> None:
@@ -47,7 +47,7 @@ def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None
         update.Config, "get_instance", lambda: SimpleNamespace(system_software=["lazygit"])
     )
     monkeypatch.setattr(
-        update.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=True)
+        runtime_settings.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=True)
     )
     monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: next(snap_checks))
 

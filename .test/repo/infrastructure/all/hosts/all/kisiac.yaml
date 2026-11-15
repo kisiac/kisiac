@@ -54,7 +54,10 @@ system_software:
   - stress-ng
   - smartmontools
   - snap:hello-world
-  - flatpak:org.gnome.Calculator
+  - flatpak:com.daidouji.oneko
+  - remove:flatpak:com.daidouji.oneko
+  - remove:snap:hello-world
+  - remove:stress-ng
 
 messages:
   - >

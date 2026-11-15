@@ -10,7 +10,7 @@ on:
 
 jobs:
   qc:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0
@@ -18,7 +18,7 @@ jobs:
       - run: pixi run lint
       - run: pixi run typecheck
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # fake block device setup fails with ubuntu-latest
     env:
       KISIAC_ENCRYPTION_PASSWORD: "dummypassword"
     steps:

@@ -1,7 +1,7 @@
 import subprocess as sp
 from types import SimpleNamespace
 
-from kisiac import runtime_settings, update, system_packages
+from kisiac import common, runtime_settings, update, system_packages
 
 
 def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) -> None:
@@ -14,7 +14,7 @@ def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) 
     monkeypatch.setattr(
         runtime_settings.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=False)
     )
-    monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: True)
+    monkeypatch.setattr(common, "exists_cmd", lambda cmd, host, sudo: True)
 
     def fake_run_cmd(*args, **kwargs):
         cmd = args[0]
@@ -27,9 +27,9 @@ def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) 
             return sp.CompletedProcess(cmd, 1, stdout="", stderr="")
         return sp.CompletedProcess(cmd, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(update, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr(common, "run_cmd", fake_run_cmd)
 
-    update.update_system_packages("localhost")
+    system_packages.update_system_packages("localhost")
 
     assert ["apt-get", "--yes", "update"] in calls
     assert ["apt-get", "--yes", "upgrade"] in calls
@@ -49,7 +49,7 @@ def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None
     monkeypatch.setattr(
         runtime_settings.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=True)
     )
-    monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: next(snap_checks))
+    monkeypatch.setattr(common, "exists_cmd", lambda cmd, host, sudo: next(snap_checks))
 
     def fake_run_cmd(*args, **kwargs):
         cmd = args[0]
@@ -60,9 +60,9 @@ def test_update_system_packages_installs_snapd_when_missing(monkeypatch) -> None
             return sp.CompletedProcess(cmd, 1, stdout="", stderr="")
         return sp.CompletedProcess(cmd, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(update, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr(common, "run_cmd", fake_run_cmd)
 
-    update.update_system_packages("localhost")
+    system_packages.update_system_packages("localhost")
 
     assert ["apt-get", "--yes", "install", "snapd"] in calls
     assert ["snap", "install", "lazygit"] in calls

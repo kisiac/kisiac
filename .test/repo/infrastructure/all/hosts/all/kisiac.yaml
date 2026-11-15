@@ -10,6 +10,17 @@ users:
       something: foo
   runner:
     managed: false
+    vars:
+      something: foo
+
+user_update_hooks:
+  - echo test
+
+system_pre_update_hooks:
+  - echo test
+
+system_post_update_hooks:
+  - echo test
 
 user_software:
   - pkg: snakemake
@@ -55,6 +66,11 @@ user_software:
 system_software:
   - stress-ng
   - smartmontools
+  - snap:hello-world
+  - flatpak:com.daidouji.oneko
+  - remove:flatpak:com.daidouji.oneko
+  - remove:snap:hello-world
+  - remove:stress-ng
 
 messages:
   - >

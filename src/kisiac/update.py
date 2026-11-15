@@ -1,3 +1,4 @@
+import shlex
 import sys
 from collections.abc import Callable
 from functools import partial
@@ -9,7 +10,6 @@ from kisiac.common import (
     UserError,
     cmd_to_str,
     confirm_action,
-    exists_cmd,
     is_in_tmux_or_screen,
     log_msg,
     multiline_input,
@@ -20,20 +20,9 @@ from kisiac.config import Config
 from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
 from kisiac.lvm import LVMSetup
-from kisiac.runtime_settings import GlobalSettings, UpdateHostSettings
+from kisiac.runtime_settings import GlobalSettings
+from kisiac.system_packages import update_system_packages
 from kisiac.zfs import update_zfs
-
-default_system_software = [
-    "openssh-server",
-    "openssh-client",
-    "lvm2",
-    "e2fsprogs",
-    "xfsprogs",
-    "btrfs-progs",
-    "smartmontools",
-    "acl",
-    "zfsutils-linux",
-]
 
 
 def setup_config() -> None:
@@ -54,6 +43,9 @@ def update_host(host: str) -> None:
         )
 
     config = Config.get_instance()
+
+    run_update_hooks(host, system_hooks=config.system_pre_update_hooks)
+
     for file in config.files.get_files(user=None):
         log_msg("Updating system file", file.target_path, host=host)
         file.write(overwrite_existing=True, host=host, sudo=True)
@@ -83,48 +75,31 @@ def update_host(host: str) -> None:
 
     run_cmd(["systemctl", "daemon-reload"], host=host, sudo=True)
 
-
-def update_system_packages(host: str) -> None:
-    run_cmd(["apt-get", "--yes", "update"], sudo=True, host=host)
-    if not UpdateHostSettings.get_instance().skip_system_upgrade:
-        run_cmd(["apt-get", "--yes", "upgrade"], sudo=True, host=host)
-    software = sorted(
-        set(Config.get_instance().system_software + default_system_software)
+    run_update_hooks(
+        host,
+        system_hooks=config.system_post_update_hooks,
+        user_hooks=config.user_post_update_hooks,
     )
 
-    deb_software = []
-    snap_software = []
 
-    for pkg in software:
-        res = run_cmd(
-            ["apt-cache", "show", "--no-all-versions", pkg],
-            host=host,
-            check=False,
-        )
-        if res.returncode == 0:
-            deb_software.append(pkg)
-        else:
-            snap_software.append(pkg)
-
-    if deb_software:
-        run_cmd(
-            ["apt-get", "--yes", "install", *deb_software],
-            sudo=True,
-            host=host,
-        )
-
-    if snap_software:
-        if not exists_cmd("snap", host=host, sudo=True):
-            run_cmd(["apt-get", "--yes", "install", "snapd"], sudo=True, host=host)
-        for pkg in snap_software:
-            installed = run_cmd(
-                ["snap", "list", pkg],
-                sudo=True,
-                host=host,
-                check=False,
-            )
-            if installed.returncode != 0:
-                run_cmd(["snap", "install", pkg], sudo=True, host=host)
+def run_update_hooks(
+    host: str, system_hooks: list[str], user_hooks: list[str] | None = None
+) -> None:
+    config = Config.get_instance()
+    for hook in system_hooks:
+        log_msg("Running system update hook", hook, host=host)
+        run_cmd(shlex.split(hook), host=host, sudo=True)
+    if user_hooks is not None:
+        for user in config.users:
+            for hook in user_hooks:
+                log_msg(
+                    f"Running update hook for user {user.username}", hook, host=host
+                )
+                run_cmd(
+                    ["sudo", "-u", user.username, "-i", *shlex.split(hook)],
+                    host=host,
+                    sudo=True,
+                )
 
 
 def update_encryptions(host: str) -> None:

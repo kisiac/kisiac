@@ -93,7 +93,7 @@ def update_system_packages(host: str) -> None:
     if pkgs := software.get(PackageSystem.SNAP):
         if not exists_cmd("snap", host=host, sudo=True):
             run_cmd(["apt-get", "--yes", "install", "snapd"], sudo=True, host=host)
-        run_cmd(["snap", "install", pkgs], sudo=True, host=host)
+        run_cmd(["snap", "install", *pkgs], sudo=True, host=host)
 
     if pkgs := software.get(PackageSystem.FLATPAK):
         if not exists_cmd("flatpak", host=host, sudo=True):

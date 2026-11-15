@@ -20,10 +20,8 @@ from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
 from kisiac.lvm import LVMSetup
 from kisiac.runtime_settings import GlobalSettings
+from kisiac.system_packages import update_system_packages
 from kisiac.zfs import update_zfs
-from src.kisiac.system_packages import (
-    update_system_packages,
-)
 
 
 def setup_config() -> None:

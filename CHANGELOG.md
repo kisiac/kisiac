@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/kisiac/kisiac/compare/v2.2.0...v2.3.0) (2026-11-15)
+
+
+### Features
+
+* add flatpak support, make package naming explicit ([#43](https://github.com/kisiac/kisiac/issues/43)) ([771925a](https://github.com/kisiac/kisiac/commit/771925ad1c725ca2949aa687be886aedcfe76756))
+* unmanaged lvm and filesystems ([#45](https://github.com/kisiac/kisiac/issues/45)) ([f835a4f](https://github.com/kisiac/kisiac/commit/f835a4f8f2ee242be3ecf129c7242138932833f0))
+
 ## [2.2.0](https://github.com/kisiac/kisiac/compare/v2.1.0...v2.2.0) (2026-11-11)
 
 

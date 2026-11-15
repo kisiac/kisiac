@@ -25,7 +25,7 @@ default_system_software = [
 
 
 software_spec_re = re.compile(
-    r"^(?P<action>(remove|))(?P<system>flatpak|snap|)(?P<pkg>.+)$"
+    r"^(?P<action>remove:)?(?P<system>(flatpak|snap):)?(?P<pkg>.+)$"
 )
 
 
@@ -54,14 +54,14 @@ def parse_software_spec(spec: str):
         raise ValueError(f"Invalid software specification: {spec}")
 
     action = (
-        PackageAction.INSTALL if match.group("action") == "" else PackageAction.REMOVE
+        PackageAction.INSTALL if match.group("action") is None else PackageAction.REMOVE
     )
     system = match.group("system")
     pkg = match.group("pkg")
     match system:
-        case "snap":
+        case "snap:":
             pkg_system = PackageSystem.SNAP
-        case "flatpak":
+        case "flatpak:":
             pkg_system = PackageSystem.FLATPAK
         case _:
             pkg_system = PackageSystem.APT

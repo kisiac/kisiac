@@ -98,6 +98,17 @@ def update_system_packages(host: str) -> None:
     if pkgs := software.get(PackageSystem.FLATPAK):
         if not exists_cmd("flatpak", host=host, sudo=True):
             run_cmd(["apt-get", "--yes", "install", "flatpak"], sudo=True, host=host)
+        run_cmd(
+            [
+                "flatpak",
+                "remote-add",
+                "--if-not-exists",
+                "flathub",
+                "https://dl.flathub.org/repo/flathub.flatpakrepo",
+            ],
+            sudo=True,
+            host=host,
+        )
         run_cmd(["flatpak", "install", "-y", *pkgs], sudo=True, host=host)
 
     if pkgs := software_to_remove.get(PackageSystem.APT):

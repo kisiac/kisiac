@@ -54,7 +54,7 @@ system_software:
   - stress-ng
   - smartmontools
   - snap:hello-world
-  - flatpak:org.freedesktop.cli.hello
+  - flatpak:org.gnome.Calculator
 
 messages:
   - >

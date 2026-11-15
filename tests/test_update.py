@@ -12,7 +12,7 @@ def test_update_system_packages_prefers_deb_and_falls_back_to_snap(monkeypatch) 
         update.Config, "get_instance", lambda: SimpleNamespace(system_software=["htop", "lazygit"])
     )
     monkeypatch.setattr(
-        update.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=False)
+        runtime_settings.UpdateHostSettings, "get_instance", lambda: SimpleNamespace(skip_system_upgrade=False)
     )
     monkeypatch.setattr(update, "exists_cmd", lambda cmd, host, sudo: True)
 

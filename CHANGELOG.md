@@ -7,6 +7,13 @@
   stored on disk. In non-interactive mode, provide it via
   `KISIAC_SUDO_PASSWORD`. This requires sudo credential caching to be enabled.
 
+## [2.4.0](https://github.com/kisiac/kisiac/compare/v2.3.0...v2.4.0) (2026-11-16)
+
+
+### Features
+
+* make sudo and tmux behavior configurable ([#46](https://github.com/kisiac/kisiac/issues/46)) ([fbc1bac](https://github.com/kisiac/kisiac/commit/fbc1bac47e0ba3085aff8a09a09b3929a3745ad5))
+
 ## [2.3.0](https://github.com/kisiac/kisiac/compare/v2.2.0...v2.3.0) (2026-11-15)
 
 

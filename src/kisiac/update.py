@@ -32,7 +32,10 @@ def setup_config() -> None:
         content = multiline_input(
             "Paste the initial configuration (YAML format), including the repo key."
         )
-    HostAgnosticPath("/etc/kisiac.yaml", sudo=True).write_text(content)
+    # ensure that stdin is open again for the sudo prompt to work
+    with open("/dev/tty") as tty:
+        sys.stdin = tty
+        HostAgnosticPath("/etc/kisiac.yaml", sudo=True).write_text(content)
 
 
 def update_host(host: str) -> None:

@@ -97,14 +97,12 @@ def provide_password(msg: str, envvar: str | None = None, confirm: bool = True) 
             return password
 
     while True:
-        prompts = [
-            inquirer.Password("password", message=msg)
-        ]
+        prompts = [inquirer.Password("password", message=msg)]
         if confirm:
-            prompts.append(inquirer.Password("confirm_password", message="Confirm password"))
-        response = inquirer.prompt(
-            prompts
-        )
+            prompts.append(
+                inquirer.Password("confirm_password", message="Confirm password")
+            )
+        response = inquirer.prompt(prompts)
         assert response is not None
         if confirm and response["password"] != response["confirm_password"]:
             log_msg("Passwords do not match, try again.")

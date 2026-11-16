@@ -68,7 +68,8 @@ class GlobalSettings(SettingsBase):
         default=False, metadata={"help": "Run in non-interactive mode"}
     )
     sudo_mode: SudoMode = field(
-        default=SudoMode.prompt, metadata={"help": "Whether prompting for sudo password is necessary"}
+        default=SudoMode.prompt,
+        metadata={"help": "Whether prompting for sudo password is necessary"},
     )
 
 

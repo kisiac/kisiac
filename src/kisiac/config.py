@@ -10,7 +10,6 @@ from typing import Any, Self
 import git
 import jinja2
 import yaml
-from kisiac.runtime_settings import GlobalSettings, SudoMode
 import yte
 from deepmerge import always_merger
 from pyfstab.entry import Entry as FstabEntry
@@ -29,6 +28,7 @@ from kisiac.common import (
 )
 from kisiac.encryption import EncryptionSetup
 from kisiac.lvm import LVMSetup
+from kisiac.runtime_settings import GlobalSettings, SudoMode
 from kisiac.zfs import ZFSSetup
 
 config_file_path = Path("/etc/kisiac.yaml")

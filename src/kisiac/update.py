@@ -20,7 +20,7 @@ from kisiac.config import Config
 from kisiac.encryption import EncryptionSetup
 from kisiac.filesystems import DeviceInfos, update_filesystems, update_permissions
 from kisiac.lvm import LVMSetup
-from kisiac.runtime_settings import GlobalSettings, SudoMode
+from kisiac.runtime_settings import GlobalSettings
 from kisiac.system_packages import update_system_packages
 from kisiac.zfs import update_zfs
 
@@ -36,7 +36,11 @@ def setup_config() -> None:
 
 
 def update_host(host: str) -> None:
-    if not is_in_tmux_or_screen() and not GlobalSettings.get_instance().non_interactive and Config.get_instance().require_terminal_multiplexer:
+    if (
+        not is_in_tmux_or_screen()
+        and not GlobalSettings.get_instance().non_interactive
+        and Config.get_instance().require_terminal_multiplexer
+    ):
         raise UserError(
             "Please run this command in a tmux or screen session in order to "
             "avoid interrupted updates due to e.g. ssh failure."
@@ -154,7 +158,9 @@ def update_encryptions(host: str) -> None:
     cmd_msg = cmd_to_str(*(dd_cmds + format_cmds))
 
     password = None
-    get_password = partial(provide_password, "Provide encryption password.", "KISIAC_ENCRYPTION_PASSWORD")
+    get_password = partial(
+        provide_password, "Provide encryption password.", "KISIAC_ENCRYPTION_PASSWORD"
+    )
 
     if format_cmds and confirm_action(
         f"The following cryptsetup commands will be executed:\n{cmd_msg}"

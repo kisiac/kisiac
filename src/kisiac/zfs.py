@@ -273,7 +273,9 @@ def update_zfs(host: str, desired: ZFSSetup) -> None:
         nonlocal password
         if password is not None:
             return password
-        password = provide_password("Provide ZFS dataset encryption passphrase.", "KISIAC_ENCRYPTION_PASSWORD")
+        password = provide_password(
+            "Provide ZFS dataset encryption passphrase.", "KISIAC_ENCRYPTION_PASSWORD"
+        )
         return password
 
     if (cmds or encryption_cmds) and confirm_action(

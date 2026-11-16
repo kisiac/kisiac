@@ -7,6 +7,13 @@
   stored on disk. In non-interactive mode, provide it via
   `KISIAC_SUDO_PASSWORD`. This requires sudo credential caching to be enabled.
 
+## [2.4.1](https://github.com/kisiac/kisiac/compare/v2.4.0...v2.4.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* ensure that stdin is open even after reading from it in non-interactive mode ([bfb3272](https://github.com/kisiac/kisiac/commit/bfb32725df70c7dfba240e6d6c496ce69e773a68))
+
 ## [2.4.0](https://github.com/kisiac/kisiac/compare/v2.3.0...v2.4.0) (2026-11-16)
 
 

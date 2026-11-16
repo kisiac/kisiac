@@ -28,6 +28,7 @@ from kisiac.common import (
 )
 from kisiac.encryption import EncryptionSetup
 from kisiac.lvm import LVMSetup
+from kisiac.runtime_settings import GlobalSettings, SudoMode
 from kisiac.zfs import ZFSSetup
 
 config_file_path = Path("/etc/kisiac.yaml")
@@ -344,6 +345,9 @@ class Config(Singleton):
 
         self._config.update(self.files.get_config())
 
+        if (sudo_mode := self.sudo_mode) is not None:
+            GlobalSettings.get_instance().sudo_mode = sudo_mode
+
     def as_str(self) -> str:
         return yaml.dump(self._config)
 
@@ -392,6 +396,24 @@ class Config(Singleton):
         infrastructure = self.get("infrastructure", default=None)
         check_type("infrastructure key", infrastructure, (str, type(None)))
         return infrastructure
+
+    @property
+    def require_terminal_multiplexer(self) -> bool:
+        require = self.get("require_terminal_multiplexer", default=True)
+        check_type("require_terminal_multiplexer key", require, bool)
+        return require
+
+    @property
+    def sudo_mode(self) -> SudoMode | None:
+        sudo_mode = self.get("sudo_mode", default=None)
+        if sudo_mode is None:
+            return None
+        check_type("sudo_mode key", sudo_mode, str)
+        try:
+            sudo_mode = SudoMode(sudo_mode)
+        except ValueError as e:
+            raise UserError(f"Invalid sudo_mode value: {e}")
+        return sudo_mode
 
     @property
     def repo(self) -> str:

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+* Set `sudo_prompt: true` in `kisiac.yaml` to request a sudo password for
+  privileged commands. The password is requested once per host and is not
+  stored on disk. In non-interactive mode, provide it via
+  `KISIAC_SUDO_PASSWORD`. This requires sudo credential caching to be enabled.
+
 ## [2.3.0](https://github.com/kisiac/kisiac/compare/v2.2.0...v2.3.0) (2026-11-15)
 
 

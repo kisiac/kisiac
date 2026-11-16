@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass, field, fields
+from enum import StrEnum
 from typing import Self, get_args, get_origin
 
 from kisiac.common import Singleton
@@ -56,10 +57,19 @@ class SettingsBase(Singleton):
         return cls.get_instance(**kwargs)
 
 
+class SudoMode(StrEnum):
+    prompt = "prompt"
+    no_prompt = "no-prompt"
+
+
 @dataclass
 class GlobalSettings(SettingsBase):
     non_interactive: bool = field(
         default=False, metadata={"help": "Run in non-interactive mode"}
+    )
+    sudo_mode: SudoMode = field(
+        default=SudoMode.prompt,
+        metadata={"help": "Whether prompting for sudo password is necessary"},
     )
 
 

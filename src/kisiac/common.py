@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess as sp
 import sys
 from collections.abc import Callable, Iterable, Sequence
@@ -9,6 +10,8 @@ from typing import Any, Self
 import inquirer
 
 cache = Path("~/.cache/kisiac").expanduser()
+_sudo_passwords: dict[str, str] = {}
+_sudo_auth_error = "\nkisiac: sudo authentication failed\n"
 
 
 class UserSet(StrEnum):
@@ -79,28 +82,29 @@ def confirm_action(desc: str) -> bool:
     return response["action"] == "yes"
 
 
-def provide_password(msg: str) -> str:
+def provide_password(msg: str, envvar: str | None = None, confirm: bool = True) -> str:
     from kisiac.runtime_settings import GlobalSettings
 
-    password = os.environ.get("KISIAC_ENCRYPTION_PASSWORD")
+    if envvar is not None:
+        password = os.environ.get(envvar)
 
-    if GlobalSettings.get_instance().non_interactive and password is None:
-        raise UserError(
-            "No password provided via KISIAC_ENCRYPTION_PASSWORD but non-interactive mode activated."
-        )
+        if GlobalSettings.get_instance().non_interactive and password is None:
+            raise UserError(
+                f"No password provided via {envvar} but non-interactive mode activated."
+            )
 
-    if password is not None:
-        return password
+        if password is not None:
+            return password
 
     while True:
-        response = inquirer.prompt(
-            [
-                inquirer.Password("password", message=msg),
-                inquirer.Password("confirm_password", message="Confirm password"),
-            ]
-        )
+        prompts = [inquirer.Password("password", message=msg)]
+        if confirm:
+            prompts.append(
+                inquirer.Password("confirm_password", message="Confirm password")
+            )
+        response = inquirer.prompt(prompts)
         assert response is not None
-        if response["password"] != response["confirm_password"]:
+        if confirm and response["password"] != response["confirm_password"]:
             log_msg("Passwords do not match, try again.")
         else:
             return response["password"]
@@ -148,9 +152,39 @@ def run_cmd(
         return str_item
 
     postprocesed_cmd: Sequence[str] = list(map(fmt_cmd_item, cmd))
+    prompt_for_sudo = False
     if sudo:
+        from kisiac.runtime_settings import GlobalSettings, SudoMode
+
+        prompt_for_sudo = GlobalSettings.get_instance().sudo_mode == SudoMode.prompt
+
+    if prompt_for_sudo:
+        if host not in _sudo_passwords:
+            password = provide_password(
+                f"Provide sudo password for {host}.", confirm=False
+            )
+            if "\n" in password or "\r" in password:
+                raise UserError("Sudo passwords cannot contain newline characters.")
+            _sudo_passwords[host] = password
+        input = f"{_sudo_passwords[host]}\n{input or ''}"
+        postprocesed_cmd = [
+            "bash",
+            "-c",
+            (
+                'IFS= read -r password; printf "%s\\n" "$password" | '
+                'sudo -S -p "" -v || '
+                r'{ printf "\nkisiac: sudo authentication failed\n" >&2; exit 125; }; '
+                "unset password; "
+                'sudo -n bash -c "$1"; exit $?'
+            ),
+            "--",
+            " ".join(postprocesed_cmd),
+        ]
+        if host != "localhost":
+            postprocesed_cmd = ["ssh", host, shlex.join(postprocesed_cmd)]
+    elif sudo:
         postprocesed_cmd = ["sudo", "bash", "-c", f"{' '.join(postprocesed_cmd)}"]
-    if host != "localhost":
+    if host != "localhost" and not prompt_for_sudo:
         if sudo:
             postprocesed_cmd = [
                 "ssh",
@@ -161,14 +195,25 @@ def run_cmd(
             postprocesed_cmd = ["ssh", host, f"{' '.join(postprocesed_cmd)}"]
     log_msg("Running command", cmd_to_str(postprocesed_cmd), host=host)
     try:
-        return sp.run(
+        result = sp.run(
             postprocesed_cmd,
-            check=check,
+            check=check and not prompt_for_sudo,
             text=True,
             capture_output=True,
             input=input,
             env=env,
         )
+        if prompt_for_sudo:
+            if result.returncode == 125 and result.stderr.endswith(_sudo_auth_error):
+                del _sudo_passwords[host]
+                detail = result.stderr.removesuffix(_sudo_auth_error).strip()
+                raise UserError(
+                    f"Sudo authentication failed on {host}"
+                    f"{': ' + detail if detail else '.'}"
+                )
+            if check:
+                result.check_returncode()
+        return result
     except sp.CalledProcessError as e:
         if user_error:
             if user_error_msg:

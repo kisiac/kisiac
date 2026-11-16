@@ -43,7 +43,7 @@ jobs:
         run: |
           ls /etc
           echo "test: true" | sudo bash -c 'tee /etc/kisiac.yaml'
-          kisiac --non-interactive setup-config << EOF
+          kisiac --sudo-mode no-prompt --non-interactive setup-config << EOF
           repo: .test/repo
           infrastructure_name: test-infra
           EOF
@@ -59,12 +59,12 @@ jobs:
       - name: update-hosts first run
         shell: pixi run bash -e {0}
         run: |
-          kisiac --non-interactive update-hosts --skip-system-upgrade localhost
+          kisiac --sudo-mode no-prompt --non-interactive update-hosts --skip-system-upgrade localhost
       - run: sudo zdb -C test_pool
       - name: update-hosts second run
         shell: pixi run bash -e {0}
         run: |
-          kisiac --non-interactive update-hosts --skip-system-upgrade localhost
+          kisiac --sudo-mode no-prompt --non-interactive update-hosts --skip-system-upgrade localhost
       - name: check permissions
         shell: pixi run bash -e {0}
         run: |
@@ -73,4 +73,4 @@ jobs:
       - name: check-hosts
         shell: pixi run bash -e {0}
         run: |
-          kisiac --non-interactive check-hosts localhost
+          kisiac --sudo-mode no-prompt --non-interactive check-hosts localhost
